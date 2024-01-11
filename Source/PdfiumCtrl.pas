@@ -1,9 +1,11 @@
 {$IFDEF FPC}
-  {$MODE DelphiUnicode}
+  {$MODE DELPHI}
 {$ENDIF FPC}
 
+{$IFNDEF FPC}
 {$A8,B-,E-,F-,G+,H+,I+,J-,K-,M-,N-,P+,Q-,R-,S-,T-,U-,V+,X+,Z1}
 {$STRINGCHECKS OFF}
+{$ENDIF FPC}
 
 unit PdfiumCtrl;
 
@@ -24,10 +26,13 @@ unit PdfiumCtrl;
 interface
 
 uses
+  Messages,
   {$IFDEF FPC}
-  LCLType, PrintersDlgs, Win32Extra,
+  LCLType, PrintersDlgs, LMessages,
+  {$ELSE}
+  Windows, Messages, ShellAPI, Types,
   {$ENDIF FPC}
-  Windows, Messages, ShellAPI, Types, SysUtils, Classes, Graphics, Controls, Forms,
+  SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, PdfiumCore;
 
 type
@@ -49,7 +54,48 @@ const
   cPdfControlAllAutoLinkOptions = [loAutoGoto, loAutoRemoteGotoReplaceDocument, loAutoOpenURI,
                                    loAutoLaunch, loAutoEmbeddedGotoReplaceDocument];
 
+  {$IFDEF FPC}
+  WM_TIMER = LM_TIMER;
+  WM_VSCROLL = LM_VSCROLL;
+  WM_HSCROLL = LM_HSCROLL;
+  WM_ERASEBKGND = LM_ERASEBKGND;
+  WM_GETDLGCODE = LM_GETDLGCODE;
+  WM_PRINTCLIENT = 792;
+  WM_KEYDOWN = LM_KEYDOWN;
+  WM_KEYUP = LM_KEYUP;
+  WM_CHAR = LM_CHAR;
+  WM_KILLFOCUS = LM_KILLFOCUS;
+  WHEEL_DELTA = 120;
+  {$ENDIF}
+
 type
+  {$IFDEF FPC}
+  TWmTimer = TLMTimer;
+  TWMVScroll = TLMVScroll;
+  TWMHScroll = TLMHScroll;
+  TWMEraseBkgnd = TLMEraseBkgnd;
+  TWMGetDlgCode = TLMNoParams;
+  TMessage = TLMessage;
+  TWMKeyDown = TLMKeyDown;
+  TWMKeyUp = TLMKeyUp;
+  TWMChar = TLMChar;
+  TWMKillFocus = TLMKillFocus;
+  TDWordFiller = record
+      {$ifdef CPU64}
+      filler : array[0..3] of byte;
+      {$endif}
+    end;
+
+  TWMPrintClient = record
+    Msg : UINT;
+    MsgFiller : TDwordFiller;
+    DC : HDC;
+    Flags : Cardinal;
+    LParamFiller : TDwordFiller;
+    Result : LRESULT;
+  end;
+  {$ENDIF FPC}
+
   TPdfControlScaleMode = (
     smFitAuto,
     smFitWidth,
@@ -356,7 +402,7 @@ type
 implementation
 
 uses
-  Math, Clipbrd, Character, Printers, StrUtils;
+  Math, Clipbrd, Character, Printers, StrUtils {$IFDEF FPC}, LCLIntf{$ENDIF FPC};
 
 const
   cScrollTimerId = 1;
@@ -402,19 +448,23 @@ begin
     FBeginDocCalled := Printer.Printing;
     Result := FBeginDocCalled;
   end;
+  {$IFNDEF FPC}
   if Result and Printer.Printing then
   begin
     // The Printers.AbortProc function calls ProcessMessages. That not only slows down the performance
     // but it also allows the user to do things in the UI.
     SetAbortProc(GetPrinterDC, @FastVclAbortProc);
   end;
+  {$ENDIF FPC}
 end;
 
 procedure TPdfDocumentVclPrinter.PrinterEndDoc;
 begin
   if Printer.Printing then
   begin
+    {$IFNDEF FPC}
     SetAbortProc(GetPrinterDC, @VclAbortProc); // restore default behavior
+    {$ENDIF FPC}
     if FBeginDocCalled then
       Printer.EndDoc;
   end;
@@ -593,7 +643,9 @@ var
   R: TRect;
   BmpDC: HDC;
   SelBmp: TBitmap;
+  {$IFNDEF FPC}
   BlendFunc: TBlendFunction;
+  {$ENDIF FPC}
 begin
   Count := Length(ARects);
   if Count > 0 then
@@ -602,18 +654,25 @@ begin
     try
       SelBmp.Canvas.Brush.Color := RGB(50, 142, 254);
       SelBmp.SetSize(100, 50);
+      {$IFNDEF FPC}
       BlendFunc.BlendOp := AC_SRC_OVER;
       BlendFunc.BlendFlags := 0;
       BlendFunc.SourceConstantAlpha := 127;
       BlendFunc.AlphaFormat := 0;
+      {$ENDIF FPC}
       BmpDC := SelBmp.Canvas.Handle;
       for I := 0 to Count - 1 do
       begin
         R := InternPageToDevice(Page, ARects[I]);
         if RectVisible(DC, R) then
+        {$IFDEF FPC}
+          StretchBlt(DC, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
+            BmpDC, 0, 0, SelBmp.Width, SelBmp.Height, SRCCOPY);
+        {$ELSE}
           AlphaBlend(DC, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
                      BmpDC, 0, 0, SelBmp.Width, SelBmp.Height,
                      BlendFunc);
+        {$ENDIF}
       end;
     finally
       SelBmp.Free;
@@ -648,7 +707,9 @@ var
   R: TRect;
   BmpDC: HDC;
   SelBmp: TBitmap;
+  {$IFNDEF FPC}
   BlendFunc: TBlendFunction;
+  {$ENDIF FPC}
 begin
   if FHighlightTextRects <> nil then
   begin
@@ -656,19 +717,26 @@ begin
     try
       SelBmp.Canvas.Brush.Color := RGB(254, 142, 50);
       SelBmp.SetSize(100, 50);
+      {$IFNDEF FPC}
       BlendFunc.BlendOp := AC_SRC_OVER;
       BlendFunc.BlendFlags := 0;
       BlendFunc.SourceConstantAlpha := 127;
       BlendFunc.AlphaFormat := 0;
+      {$ENDIF FPC}
       BmpDC := SelBmp.Canvas.Handle;
 
       for I := 0 to Length(FHighlightTextRects) - 1 do
       begin
         R := InternPageToDevice(Page, FHighlightTextRects[I]);
         if RectVisible(DC, R) then
+        {$IFDEF FPC}
+          StretchBlt(DC, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
+            BmpDC, 0, 0, SelBmp.Width, SelBmp.Height, SRCCOPY);
+        {$ELSE}
           AlphaBlend(DC, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
                      BmpDC, 0, 0, SelBmp.Width, SelBmp.Height,
                      BlendFunc);
+        {$ENDIF}
       end;
     finally
       SelBmp.Free;
@@ -731,8 +799,8 @@ procedure TPdfControl.DrawPage(DC: HDC; Page: TPdfPage; DirectDrawPage: Boolean)
 var
   PageDC: HDC;
   OldPageBmp: HBITMAP;
-  bmi: TBitmapInfo;
-  BmpData: Windows.TBitmap;
+  bmi: {$IFDEF FPC}LCLType.BITMAPINFO{$ELSE}TBitmapInfo{$ENDIF FPC};
+  BmpData: {$IFDEF FPC}LCLType.BITMAP {$ELSE}Windows.TBitmap{$ENDIF FPC};
   Bits: Pointer;
 begin
   if DirectDrawPage then
@@ -766,7 +834,7 @@ begin
         bmi.bmiHeader.biPlanes := 1;
         bmi.bmiHeader.biBitCount := 32;
         bmi.bmiHeader.biCompression := BI_RGB;
-        FPageBitmap := CreateDIBSection(DC, bmi, DIB_RGB_COLORS, Bits, 0, 0);
+        FPageBitmap := {$IFDEF FPC}LCLIntf.{$ENDIF FPC}CreateDIBSection(DC, bmi, DIB_RGB_COLORS, Bits, 0, 0);
       end;
     end;
 
@@ -810,17 +878,19 @@ begin
 
     if DirectPageDraw or FSelectionActive or (FHighlightTextRects <> nil) then
     begin
-      case GetClipBox(DC, ClipR) of
+      case {$IFDEF FPC}LCLIntf.{$ENDIF FPC}GetClipBox(DC, {$IFDEF FPC}@{$ENDIF FPC}ClipR) of
         NULLREGION:
           Exit; // nothing to paint
         ERROR:
-          Windows.GetClientRect(Handle, ClipR);
+          {$IFDEF FPC}LCLIntf.{$ELSE}Windows.{$ENDIF FPC}GetClientRect(Handle, ClipR);
       end;
       // Double buffer, minimal bitmap size
       DrawDC := CreateCompatibleDC(DC);
       DrawBmp := CreateCompatibleBitmap(DC, ClipR.Right - ClipR.Left, ClipR.Bottom - ClipR.Top);
       OldDrawBmp := SelectObject(DrawDC, DrawBmp);
-      OffsetWindowOrgEx(DrawDC, ClipR.Left, ClipR.Top, nil);
+      {$IFNDEF FPC}
+        OffsetWindowOrgEx(DrawDC, ClipR.Left, ClipR.Top, nil);
+      {$ENDIF FPC}
 
       // copy the clipping region and adjust to the bitmap's device units
       Rgn := CreateRectRgn(0, 0, 1, 1);
@@ -839,6 +909,7 @@ begin
       end
       else
       begin
+        {$IFNDEF FPC}
         if GetRandomRgn(DC, Rgn, SYSRGN) = 1 then // system clip region, set by BeginPaint, in screen coordinates
         begin
           GetWindowRect(Handle, WndR);
@@ -847,6 +918,7 @@ begin
           if SelectClipRgn(DrawDC, Rgn) = NULLREGION then
             Exit; // nothing to paint
         end;
+        {$ENDIF}
       end;
       DeleteObject(Rgn);
     end
@@ -1607,7 +1679,7 @@ begin
   begin
     Clipboard.Open;
     try
-      if Clipboard.HasFormat(CF_UNICODETEXT) or Clipboard.HasFormat(CF_TEXT) then
+      if {$IFNDEF FPC}Clipboard.HasFormat(CF_UNICODETEXT) or{$ENDIF FPC} Clipboard.HasFormat(CF_TEXT) then
         CurrentPage.FormReplaceSelection(Clipboard.AsText);
     finally
       Clipboard.Close;
@@ -2156,6 +2228,12 @@ begin
     Result := nil;
 end;
 
+{$IFDEF FPC}
+function TPdfControl.ShellOpenFileName(const FileName: string; Launch: Boolean): Boolean;
+begin
+  Result := OpenDocument(FileName);
+end;
+{$ELSE}
 function TPdfControl.ShellOpenFileName(const FileName: string; Launch: Boolean): Boolean;
 var
   Info: TShellExecuteInfo;
@@ -2173,6 +2251,7 @@ begin
   Info.nShow := SW_NORMAL;
   Result := ShellExecuteEx(@Info);
 end;
+{$ENDIF FPC}
 
 procedure TPdfControl.WebLinkClick(const Url: string);
 begin

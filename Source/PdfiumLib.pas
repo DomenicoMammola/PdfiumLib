@@ -4,7 +4,7 @@
 
 unit PdfiumLib;
 {$IFDEF FPC}
-  {$MODE DelphiUnicode}
+  {$MODE DELPHI}
 {$ENDIF FPC}
 
 {$IFNDEF FPC}
