@@ -9195,7 +9195,7 @@ const
   {$ENDIF FPC}
 
 const
-  pdfium_dll = 'pdfium.dll';
+  pdfium_dll = {$IFDEF FPC}{$IFDEF UNIX}'libpdfium.so'{$ELSE}'pdfium.dll'{$ENDIF UNIX}{$ELSE}'pdfium.dll'{$ENDIF FPC};
 
 var
   PdfiumModule: HMODULE;

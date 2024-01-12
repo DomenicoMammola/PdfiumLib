@@ -2572,7 +2572,7 @@ begin
   ScrollInfo.fMask := SIF_POS;
 
   // Vertical scroll
-  if (YOffset <> 0) and (Style and WS_VSCROLL <> 0) and GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
+  if (YOffset <> 0) and {$IFDEF FPC}{$IFDEF WINDOWS}(Style and WS_VSCROLL <> 0) and{$ENDIF WINDOWS}{$ELSE}(Style and WS_VSCROLL <> 0) and{$ENDIF FPC} GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
   begin
     Y := ScrollInfo.nPos;
     ScrollInfo.nPos := Y + YOffset;
@@ -2584,7 +2584,7 @@ begin
     YOffset := 0;
 
   // Horizontal scroll
-  if (XOffset <> 0) and (Style and WS_HSCROLL <> 0) and GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
+  if (XOffset <> 0) and {$IFDEF FPC}{$IFDEF WINDOWS}(Style and WS_HSCROLL <> 0) and{$ENDIF WINDOWS}{$ELSE}(Style and WS_HSCROLL <> 0) and{$ENDIF FPC} GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
   begin
     X := ScrollInfo.nPos;
     ScrollInfo.nPos := X + XOffset;

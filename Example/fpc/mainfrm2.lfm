@@ -1,7 +1,7 @@
 object frmMain: TfrmMain
-  Left = 0
+  Left = 290
   Height = 647
-  Top = 0
+  Top = 217
   Width = 780
   Caption = 'PDFium Test'
   ClientHeight = 647
@@ -90,34 +90,34 @@ object frmMain: TfrmMain
     end
     object chkChangePageOnMouseScrolling: TCheckBox
       Left = 599
-      Height = 17
+      Height = 21
       Top = 4
-      Width = 163
+      Width = 171
       Caption = 'ChangePageOnMouseScrolling'
       TabOrder = 9
       OnClick = chkChangePageOnMouseScrollingClick
     end
     object chkLCDOptimize: TCheckBox
       Left = 378
-      Height = 17
+      Height = 21
       Top = 4
-      Width = 78
+      Width = 86
       Caption = 'LCDOptimize'
       TabOrder = 6
       OnClick = chkLCDOptimizeClick
     end
     object chkSmoothScroll: TCheckBox
       Left = 458
-      Height = 17
+      Height = 21
       Top = 4
-      Width = 79
+      Width = 87
       Caption = 'SmoothScroll'
       TabOrder = 7
       OnClick = chkSmoothScrollClick
     end
     object edtZoom: TSpinEdit
       Left = 544
-      Height = 21
+      Height = 22
       Top = 2
       Width = 49
       MaxValue = 10000

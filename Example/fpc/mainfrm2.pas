@@ -3,7 +3,7 @@ unit mainfrm2;
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics,
+  SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, PdfiumCore, ExtCtrls, StdCtrls, PdfiumCtrl,
   Spin, ComCtrls, PrintersDlgs;
 
@@ -71,6 +71,9 @@ begin
   FCtrl.Parent := Self;
   FCtrl.SendToBack; // put the control behind the buttons
   FCtrl.Color := clGray;
+  {$IFDEF UNIX}
+  FCtrl.BufferedPageDraw := false;
+  {$ENDIF}
   //FCtrl.Color := clWhite;
   //FCtrl.PageBorderColor := clBlack;
   //FCtrl.PageShadowColor := clDkGray;

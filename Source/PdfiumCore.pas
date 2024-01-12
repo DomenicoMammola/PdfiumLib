@@ -14,21 +14,26 @@ interface
 {.$UNDEF MSWINDOWS}
 
 uses
-  {$IFDEF MSWINDOWS}
-  Windows, //WinSpool,
+  {$IFDEF FPC}
+  LCLType, LCLIntf, {$IFDEF LINUX}Graphics, {$ENDIF LINUX}
   {$ELSE}
-    {$IFDEF FPC}
-  LCLType,
-    {$ENDIF FPC}
-  ExtCtrls,
-  {$ENDIF MSWINDOWS}
-  Types, SysUtils, Classes, Contnrs,
+    {$IFDEF MSWINDOWS}
+    Windows, //WinSpool,
+    {$ENDIF MSWINDOWS}
+  {$ENDIF FPC}
+  ExtCtrls, Types, SysUtils, Classes, Contnrs,
   PdfiumLib;
 
 const
   // DIN A4
   PdfDefaultPageWidth = 595;
   PdfDefaultPageHeight = 842;
+{$IFDEF FPC}
+  PHYSICALWIDTH = 110;
+  PHYSICALHEIGHT = 111;
+  PHYSICALOFFSETX = 112;
+  PHYSICALOFFSETY = 113;
+{$ENDIF FPC}
 
 type
   EPdfException = class(Exception);
@@ -1597,7 +1602,7 @@ begin
           finally
             FreeAndNil(FFileStream);
           end;
-        end
+        end;
       dloOnDemand:
         LoadFromActiveStream(FFileStream, Password);
     end;
@@ -2310,7 +2315,7 @@ end;
 function TPdfPage.GetPdfActionFilePath(Action: FPDF_ACTION): string;
 var
   ByteSize: Integer;
-  Buf: UTF8String;
+  Buf: {$IFDEF FPC}String{$ELSE}UTF8String{$ENDIF};
 begin
   Result := '';
   if Action <> nil then
@@ -2328,7 +2333,7 @@ begin
           if ByteSize > 0 then
           begin
             SetLength(Buf, ByteSize - 1); // ByteSize includes #0
-            Result := UTF8ToString(Buf);
+            Result := {$IFDEF FPC}Buf{$ELSE}UTF8ToString(Buf){$ENDIF FPC};
           end;
         end;
     end;
@@ -2386,6 +2391,14 @@ var
   BmpBits: Pointer;
   PdfBmp: TPdfBitmap;
   BmpDC: HDC;
+  {$IFDEF FPC}
+  {$IFDEF LINUX}
+  tmpBitmap: TBitmap;
+  Canvas: TCanvas;
+  PixelsArray :  packed array of byte;
+  r, c, p : integer;
+  {$ENDIF LINUX}
+  {$ENDIF FPC}
 begin
   Open;
 
@@ -2407,35 +2420,80 @@ begin
 
 
   FillChar(BitmapInfo, SizeOf(BitmapInfo), 0);
-  BitmapInfo.bmiHeader.biSize := SizeOf(BitmapInfo);
+  BitmapInfo.bmiHeader.biSize := SizeOf(TBitmapInfoHeader); //(BitmapInfo);
   BitmapInfo.bmiHeader.biWidth := Width;
   BitmapInfo.bmiHeader.biHeight := -Height;
   BitmapInfo.bmiHeader.biPlanes := 1;
   BitmapInfo.bmiHeader.biBitCount := 32;
   BitmapInfo.bmiHeader.biCompression := BI_RGB;
-  BmpBits := nil;
-  Bmp := CreateDIBSection(DC, BitmapInfo, DIB_RGB_COLORS, BmpBits, 0, 0);
-  if Bmp <> 0 then
-  begin
+  BitmapInfo.bmiHeader.biSizeImage:= Width * Height * 4;
+
+  {$IFDEF LINUX}
+    tmpBitmap := TBitmap.Create;
     try
-      PdfBmp := TPdfBitmap.Create(Width, Height, bfBGRA, BmpBits, Width * 4);
+      tmpBitmap.Width:= Width;
+      tmpBitmap.Height:= Height;
+      //tmpBitmap.PixelFormat:= pf32bit;
+      SetLength(PixelsArray, Width * Height * 3);
+
+      PdfBmp := TPdfBitmap.Create(Width, Height, bfBGR, PixelsArray, Width * 3); // tmpBitmap.RawImage.Data
       try
         PdfBmp.FillRect(0, 0, Width, Height, $FF000000 or PageBackground);
         DrawToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
         DrawFormToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+
+        p := 0;
+        for r := 0 to Height - 1 do
+        begin
+          for c := 0 to Width - 1 do
+          begin
+            tmpBitmap.Canvas.Pixels[c, r] := RGBToColor(PixelsArray[p+2], PixelsArray[p+1], PixelsArray[p]);
+            inc(p, 3);
+          end;
+        end;
+        //tmpBitmap.SaveToFile('aaa.bmp');
+        Canvas:= TCanvas.Create;
+        try
+          Canvas.Handle:= DC;
+          Canvas.Brush.Color:= PageBackground;
+          Canvas.FillRect(0, 0, Width - 1, Height - 1);
+          Canvas.Draw(X, Y, tmpBitmap);
+        finally
+          Canvas.Free;
+        end;
       finally
         PdfBmp.Free;
       end;
-
-      BmpDC := CreateCompatibleDC(DC);
-      OldBmp := SelectObject(BmpDC, Bmp);
-      BitBlt(DC, X, Y, Width, Height, BmpDC, 0, 0, SRCCOPY);
-      SelectObject(BmpDC, OldBmp);
-      DeleteDC(BmpDC);
     finally
-      DeleteObject(Bmp);
+      tmpBitmap.FreeImage;
     end;
-  end;
+
+  {$ELSE}
+    BmpBits := nil;
+    Bmp := CreateDIBSection(DC, BitmapInfo, DIB_RGB_COLORS, BmpBits, 0, 0);
+    if Bmp <> 0 then
+    begin
+      try
+        PdfBmp := TPdfBitmap.Create(Width, Height, bfBGRA, BmpBits, Width * 4);
+        try
+          PdfBmp.FillRect(0, 0, Width, Height, $FF000000 or PageBackground);
+          DrawToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+          DrawFormToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+        finally
+          PdfBmp.Free;
+        end;
+
+        BmpDC := CreateCompatibleDC(DC);
+        OldBmp := SelectObject(BmpDC, Bmp);
+        BitBlt(DC, X, Y, Width, Height, BmpDC, 0, 0, SRCCOPY);
+        SelectObject(BmpDC, OldBmp);
+        DeleteDC(BmpDC);
+      finally
+        DeleteObject(Bmp);
+      end;
+    end;
+  {$ENDIF LINUX}
+
 end;
 
 procedure TPdfPage.DrawToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer;
