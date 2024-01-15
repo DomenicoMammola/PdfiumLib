@@ -15,7 +15,7 @@ interface
 
 uses
   {$IFDEF FPC}
-  LCLType, LCLIntf, {$IFDEF LINUX}Graphics, {$ENDIF LINUX}
+  LCLType, LCLIntf, {$IFDEF MSWINDOWS}Windows, {$ENDIF MSWINDOWS}{$IFDEF LINUX}Graphics, {$ENDIF LINUX}
   {$ELSE}
     {$IFDEF MSWINDOWS}
     Windows, //WinSpool,
