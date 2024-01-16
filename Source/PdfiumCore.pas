@@ -2,6 +2,9 @@ unit PdfiumCore;
 
 {$IFDEF FPC}
   {$MODE DELPHI}
+  {$IFDEF UNIX}
+     {$DEFINE FPC_UNIX}
+  {$ENDIF UNIX}
 {$ENDIF FPC}
 
 {$IFNDEF FPC}
@@ -9,18 +12,18 @@ unit PdfiumCore;
   {$STRINGCHECKS OFF}
 {$ENDIF ~FPC}
 
+
 interface
 
 {.$UNDEF MSWINDOWS}
 
 uses
-  {$IFDEF FPC}
-  LCLType, LCLIntf, {$IFDEF MSWINDOWS}Windows, {$ENDIF MSWINDOWS}{$IFDEF LINUX}Graphics, {$ENDIF LINUX}
-  {$ELSE}
-    {$IFDEF MSWINDOWS}
-    Windows, //WinSpool,
-    {$ENDIF MSWINDOWS}
-  {$ENDIF FPC}
+  {$IFDEF MSWINDOWS}
+  Windows, //WinSpool,
+  {$ENDIF MSWINDOWS}
+  {$IFDEF FPC_UNIX}
+  Graphics, LCLType, LCLIntf,
+  {$ENDIF FPC_UNIX}
   ExtCtrls, Types, SysUtils, Classes, Contnrs,
   PdfiumLib;
 
@@ -28,12 +31,12 @@ const
   // DIN A4
   PdfDefaultPageWidth = 595;
   PdfDefaultPageHeight = 842;
-{$IFDEF FPC}
+{$IFDEF FPC_UNIX}
   PHYSICALWIDTH = 110;
   PHYSICALHEIGHT = 111;
   PHYSICALOFFSETX = 112;
   PHYSICALOFFSETY = 113;
-{$ENDIF FPC}
+{$ENDIF FPC_UNIX}
 
 type
   EPdfException = class(Exception);
@@ -2391,14 +2394,12 @@ var
   BmpBits: Pointer;
   PdfBmp: TPdfBitmap;
   BmpDC: HDC;
-  {$IFDEF FPC}
-  {$IFDEF LINUX}
+  {$IFDEF FPC_UNIX}
   tmpBitmap: TBitmap;
   Canvas: TCanvas;
   PixelsArray :  packed array of byte;
   r, c, p : integer;
-  {$ENDIF LINUX}
-  {$ENDIF FPC}
+  {$ENDIF FPC_UNIX}
 begin
   Open;
 
@@ -2428,8 +2429,8 @@ begin
   BitmapInfo.bmiHeader.biCompression := BI_RGB;
   BitmapInfo.bmiHeader.biSizeImage:= Width * Height * 4;
 
-  {$IFDEF LINUX}
-    tmpBitmap := TBitmap.Create;
+  {$IFDEF FPC_UNIX}
+    tmpBitmap := TBitmap.Create; // use TLazIntfImage?
     try
       tmpBitmap.Width:= Width;
       tmpBitmap.Height:= Height;
@@ -2451,7 +2452,6 @@ begin
             inc(p, 3);
           end;
         end;
-        //tmpBitmap.SaveToFile('aaa.bmp');
         Canvas:= TCanvas.Create;
         try
           Canvas.Handle:= DC;
@@ -2493,7 +2493,6 @@ begin
       end;
     end;
   {$ENDIF LINUX}
-
 end;
 
 procedure TPdfPage.DrawToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer;
@@ -4542,7 +4541,7 @@ begin
 end;
 
 initialization
-  {$IFDEF FPC}
+  {$IFDEF FPC_UNIX}
   InitCriticalSection(PDFiumInitCritSect);
   InitCriticalSection(FFITimersCritSect);
   {$ELSE}
@@ -4551,7 +4550,7 @@ initialization
   {$ENDIF FPC}
 
 finalization
-  {$IFDEF FPC}
+  {$IFDEF FPC_UNIX}
   DoneCriticalSection(FFITimersCritSect);
   DoneCriticalSection(PDFiumInitCritSect);
   {$ELSE}

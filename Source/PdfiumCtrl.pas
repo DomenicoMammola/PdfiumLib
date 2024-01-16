@@ -1,8 +1,9 @@
 {$IFDEF FPC}
   {$MODE DELPHI}
-{$ENDIF FPC}
-
-{$IFNDEF FPC}
+  {$IFDEF UNIX}
+     {$DEFINE FPC_UNIX}
+  {$ENDIF UNIX}
+{$ELSE}
 {$A8,B-,E-,F-,G+,H+,I+,J-,K-,M-,N-,P+,Q-,R-,S-,T-,U-,V+,X+,Z1}
 {$STRINGCHECKS OFF}
 {$ENDIF FPC}
@@ -26,11 +27,13 @@ unit PdfiumCtrl;
 interface
 
 uses
-  Messages,
-  {$IFDEF FPC}
-  LCLType, PrintersDlgs, LMessages,
+  {$IFDEF FPC_UNIX}
+  LMessages,
   {$ELSE}
-  Windows, Messages, ShellAPI, Types,
+  Windows, Messages, {$IFNDEF FPC}ShellAPI, Types,{$ENDIF ~FPC}
+  {$ENDIF FPC_UNIX}
+  {$IFDEF FPC}
+  PrintersDlgs, LCLType,
   {$ENDIF FPC}
   SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, PdfiumCore;
@@ -54,7 +57,7 @@ const
   cPdfControlAllAutoLinkOptions = [loAutoGoto, loAutoRemoteGotoReplaceDocument, loAutoOpenURI,
                                    loAutoLaunch, loAutoEmbeddedGotoReplaceDocument];
 
-  {$IFDEF FPC}
+  {$IFDEF FPC_UNIX}
   WM_TIMER = LM_TIMER;
   WM_VSCROLL = LM_VSCROLL;
   WM_HSCROLL = LM_HSCROLL;
@@ -66,10 +69,10 @@ const
   WM_CHAR = LM_CHAR;
   WM_KILLFOCUS = LM_KILLFOCUS;
   WHEEL_DELTA = 120;
-  {$ENDIF}
+  {$ENDIF FPC_UNIX}
 
 type
-  {$IFDEF FPC}
+  {$IFDEF FPC_UNIX}
   TWmTimer = TLMTimer;
   TWMVScroll = TLMVScroll;
   TWMHScroll = TLMHScroll;
@@ -94,7 +97,7 @@ type
     LParamFiller : TDwordFiller;
     Result : LRESULT;
   end;
-  {$ENDIF FPC}
+  {$ENDIF FPC_UNIX}
 
   TPdfControlScaleMode = (
     smFitAuto,
@@ -399,6 +402,13 @@ type
       AParentWnd: HWND = 0): Boolean; static;
   end;
 
+{$IFDEF FPC}
+  {$IFDEF MSWINDOWS}
+    function AlphaBlend(hdcDest: HDC; nXOriginDest, nYOriginDest, nWidthDest,
+      nHeightDest: Integer; hdcSrc: HDC; nXOriginSrc, nYOriginSrc, nWidthSrc,
+      nHeightSrc: Integer; BlendFunction: BLENDFUNCTION): BOOL; stdcall;
+  {$ENDIF MSWINDOWS}
+{$ENDIF FPC}
 implementation
 
 uses
@@ -409,6 +419,28 @@ const
   cTrippleClickTimerId = 2;
   cScrollTimerInterval = 50;
   cDefaultScrollOffset = 25;
+
+  {$IFDEF FPC}
+    {$IFDEF MSWINDOWS}
+      const
+        { Msimg32.dll is included in Windows 98 and later }
+        Msimg32DLLName = 'Msimg32.dll';
+        AlphaBlendName = 'AlphaBlend';
+    {$ENDIF MSWINDOWS}
+  {$ENDIF FPC}
+
+{$IFDEF FPC}
+  {$IFDEF MSWINDOWS}
+    var
+      GMsimg32Handle: THandle = 0;
+      GTriedLoadMsimg32Dll: Boolean = False;
+
+      _AlphaBlend: function(hdcDest: HDC; nXOriginDest, nYOriginDest, nWidthDest,
+        nHeightDest: Integer; hdcSrc: HDC; nXOriginSrc, nYOriginSrc, nWidthSrc,
+        nHeightSrc: Integer; BlendFunction: BLENDFUNCTION): BOOL; stdcall;
+  {$ENDIF MSWINDOWS}
+{$ENDIF FPC}
+
 
 function IsWhitespace(Ch: Char): Boolean;
 begin
@@ -448,23 +480,23 @@ begin
     FBeginDocCalled := Printer.Printing;
     Result := FBeginDocCalled;
   end;
-  {$IFNDEF FPC}
+  {$IFNDEF FPC_UNIX}
   if Result and Printer.Printing then
   begin
     // The Printers.AbortProc function calls ProcessMessages. That not only slows down the performance
     // but it also allows the user to do things in the UI.
     SetAbortProc(GetPrinterDC, @FastVclAbortProc);
   end;
-  {$ENDIF FPC}
+  {$ENDIF ~FPC_UNIX}
 end;
 
 procedure TPdfDocumentVclPrinter.PrinterEndDoc;
 begin
   if Printer.Printing then
   begin
-    {$IFNDEF FPC}
+    {$IFNDEF FPC_UNIX}
     SetAbortProc(GetPrinterDC, @VclAbortProc); // restore default behavior
-    {$ENDIF FPC}
+    {$ENDIF ~FPC_UNIX}
     if FBeginDocCalled then
       Printer.EndDoc;
   end;
@@ -594,7 +626,7 @@ destructor TPdfControl.Destroy;
 begin
   if FPageBitmap <> 0 then
     DeleteObject(FPageBitmap);
-  FreeAndNil(FWebLinkInfo);	
+  FreeAndNil(FWebLinkInfo);
   FDocument.Free;
   inherited Destroy;
 end;
@@ -644,9 +676,9 @@ var
   R: TRect;
   BmpDC: HDC;
   SelBmp: TBitmap;
-  {$IFNDEF FPC}
+  {$IFNDEF FPC_UNIX}
   BlendFunc: TBlendFunction;
-  {$ENDIF FPC}
+  {$ENDIF ~FPC_UNIX}
 begin
   Count := Length(ARects);
   if Count > 0 then
@@ -655,25 +687,25 @@ begin
     try
       SelBmp.Canvas.Brush.Color := RGB(50, 142, 254);
       SelBmp.SetSize(100, 50);
-      {$IFNDEF FPC}
+      {$IFNDEF FPC_UNIX}
       BlendFunc.BlendOp := AC_SRC_OVER;
       BlendFunc.BlendFlags := 0;
       BlendFunc.SourceConstantAlpha := 127;
       BlendFunc.AlphaFormat := 0;
-      {$ENDIF FPC}
+      {$ENDIF ~FPC_UNIX}
       BmpDC := SelBmp.Canvas.Handle;
       for I := 0 to Count - 1 do
       begin
         R := InternPageToDevice(Page, ARects[I]);
         if RectVisible(DC, R) then
-        {$IFDEF FPC}
+        {$IFDEF FPC_UNIX}
           StretchBlt(DC, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
             BmpDC, 0, 0, SelBmp.Width, SelBmp.Height, SRCCOPY);
         {$ELSE}
           AlphaBlend(DC, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
                      BmpDC, 0, 0, SelBmp.Width, SelBmp.Height,
                      BlendFunc);
-        {$ENDIF}
+        {$ENDIF FPC_UNIX}
       end;
     finally
       SelBmp.Free;
@@ -708,9 +740,9 @@ var
   R: TRect;
   BmpDC: HDC;
   SelBmp: TBitmap;
-  {$IFNDEF FPC}
+  {$IFNDEF FPC_UNIX}
   BlendFunc: TBlendFunction;
-  {$ENDIF FPC}
+  {$ENDIF ~FPC_UNIX}
 begin
   if FHighlightTextRects <> nil then
   begin
@@ -718,26 +750,26 @@ begin
     try
       SelBmp.Canvas.Brush.Color := RGB(254, 142, 50);
       SelBmp.SetSize(100, 50);
-      {$IFNDEF FPC}
+      {$IFNDEF FPC_UNIX}
       BlendFunc.BlendOp := AC_SRC_OVER;
       BlendFunc.BlendFlags := 0;
       BlendFunc.SourceConstantAlpha := 127;
       BlendFunc.AlphaFormat := 0;
-      {$ENDIF FPC}
+      {$ENDIF ~FPC_UNIX}
       BmpDC := SelBmp.Canvas.Handle;
 
       for I := 0 to Length(FHighlightTextRects) - 1 do
       begin
         R := InternPageToDevice(Page, FHighlightTextRects[I]);
         if RectVisible(DC, R) then
-        {$IFDEF FPC}
+        {$IFDEF FPC_UNIX}
           StretchBlt(DC, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
             BmpDC, 0, 0, SelBmp.Width, SelBmp.Height, SRCCOPY);
         {$ELSE}
           AlphaBlend(DC, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top,
                      BmpDC, 0, 0, SelBmp.Width, SelBmp.Height,
                      BlendFunc);
-        {$ENDIF}
+        {$ENDIF FPC_UNIX}
       end;
     finally
       SelBmp.Free;
@@ -800,8 +832,8 @@ procedure TPdfControl.DrawPage(DC: HDC; Page: TPdfPage; DirectDrawPage: Boolean)
 var
   PageDC: HDC;
   OldPageBmp: HBITMAP;
-  bmi: {$IFDEF FPC}LCLType.BITMAPINFO{$ELSE}TBitmapInfo{$ENDIF FPC};
-  BmpData: {$IFDEF FPC}LCLType.BITMAP {$ELSE}Windows.TBitmap{$ENDIF FPC};
+  bmi: {$IFDEF FPC_UNIX}LCLType.BITMAPINFO{$ELSE}Windows.TBitmapInfo{$ENDIF FPC_UNIX};
+  BmpData: {$IFDEF FPC_UNIX}LCLType.BITMAP {$ELSE}Windows.TBitmap{$ENDIF FPC_UNIX};
   Bits: Pointer;
 begin
   if DirectDrawPage then
@@ -835,7 +867,7 @@ begin
         bmi.bmiHeader.biPlanes := 1;
         bmi.bmiHeader.biBitCount := 32;
         bmi.bmiHeader.biCompression := BI_RGB;
-        FPageBitmap := {$IFDEF FPC}LCLIntf.{$ENDIF FPC}CreateDIBSection(DC, bmi, DIB_RGB_COLORS, Bits, 0, 0);
+        FPageBitmap := {$IFDEF FPC_UNIX}LCLIntf.{$ELSE}Windows.{$ENDIF FPC_UNIX}CreateDIBSection(DC, bmi, DIB_RGB_COLORS, Bits, 0, 0);
       end;
     end;
 
@@ -879,11 +911,11 @@ begin
 
     if DirectPageDraw or FSelectionActive or (FHighlightTextRects <> nil) then
     begin
-      case {$IFDEF FPC}LCLIntf.{$ENDIF FPC}GetClipBox(DC, {$IFDEF FPC}@{$ENDIF FPC}ClipR) of
+      case {$IFDEF FPC_UNIX}LCLIntf.{$ENDIF FPC_UNIX}GetClipBox(DC, {$IFDEF FPC}@{$ENDIF FPC}ClipR) of
         NULLREGION:
           Exit; // nothing to paint
         ERROR:
-          {$IFDEF FPC}LCLIntf.{$ELSE}Windows.{$ENDIF FPC}GetClientRect(Handle, ClipR);
+          {$IFDEF FPC_UNIX}LCLIntf.{$ELSE}Windows.{$ENDIF FPC_UNIX}GetClientRect(Handle, ClipR);
       end;
       // Double buffer, minimal bitmap size
       DrawDC := CreateCompatibleDC(DC);
@@ -891,7 +923,7 @@ begin
       OldDrawBmp := SelectObject(DrawDC, DrawBmp);
       {$IFNDEF FPC}
         OffsetWindowOrgEx(DrawDC, ClipR.Left, ClipR.Top, nil);
-      {$ENDIF FPC}
+      {$ENDIF ~FPC_UNIX}
 
       // copy the clipping region and adjust to the bitmap's device units
       Rgn := CreateRectRgn(0, 0, 1, 1);
@@ -910,7 +942,7 @@ begin
       end
       else
       begin
-        {$IFNDEF FPC}
+        {$IFNDEF FPC_UNIX}
         if GetRandomRgn(DC, Rgn, SYSRGN) = 1 then // system clip region, set by BeginPaint, in screen coordinates
         begin
           GetWindowRect(Handle, WndR);
@@ -919,7 +951,7 @@ begin
           if SelectClipRgn(DrawDC, Rgn) = NULLREGION then
             Exit; // nothing to paint
         end;
-        {$ENDIF}
+        {$ENDIF ~FPC_UNIX}
       end;
       DeleteObject(Rgn);
     end
@@ -932,10 +964,10 @@ begin
 
     try
       // Draw borders
-      FillRect(DrawDC, Rect(0, 0, Width, FDrawY), Brush.Handle);                                      // top bar
-      FillRect(DrawDC, Rect(0, FDrawY, FDrawX, FDrawY + FDrawHeight), Brush.Handle);                  // left bar
-      FillRect(DrawDC, Rect(FDrawX + FDrawWidth, FDrawY, Width, FDrawY + FDrawHeight), Brush.Handle); // right bar
-      FillRect(DrawDC, Rect(0, FDrawY + FDrawHeight, Width, Height), Brush.Handle);                   // bottom bar
+      FillRect(DrawDC, Rect(0, 0, Width, FDrawY), Brush.{$IFDEF FPC}Reference.{$ENDIF FPC}Handle);                                      // top bar
+      FillRect(DrawDC, Rect(0, FDrawY, FDrawX, FDrawY + FDrawHeight), Brush.{$IFDEF FPC}Reference.{$ENDIF FPC}Handle);                  // left bar
+      FillRect(DrawDC, Rect(FDrawX + FDrawWidth, FDrawY, Width, FDrawY + FDrawHeight), Brush.{$IFDEF FPC}Reference.{$ENDIF FPC}Handle); // right bar
+      FillRect(DrawDC, Rect(0, FDrawY + FDrawHeight, Width, Height), Brush.{$IFDEF FPC}Reference.{$ENDIF FPC}Handle);                   // bottom bar
 
       // Draw the page
       Page := CurrentPage;
@@ -982,7 +1014,7 @@ begin
       DeleteObject(FPageBitmap);
       FPageBitmap := 0;
     end;
-    FillRect(DC, Rect(0, 0, Width, Height), Brush.Handle);
+    FillRect(DC, Rect(0, 0, Width, Height), Brush.{$IFDEF FPC}Reference.{$ENDIF FPC}Handle);
     DrawBorderAndShadow(DC);
     if Assigned(FOnPaint) then
       FOnPaint(Self);
@@ -1051,7 +1083,7 @@ end;
 
 function TPdfControl.InternSetPageIndex(Value: Integer; ScrollTransition, InverseScrollTransition: Boolean): Boolean;
 var
-  ScrollInfo: TScrollInfo;
+  ScrollInfo: {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}TScrollInfo;
   ScrollY: Integer;
   OldPageIndex: Integer;
 begin
@@ -1078,7 +1110,7 @@ begin
       // PageIndex change.
       ScrollY := 0;
       ScrollInfo.fMask := SIF_RANGE or SIF_PAGE or SIF_POS;
-      if GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
+      if {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
       begin
         if InverseScrollTransition then
         begin
@@ -1099,15 +1131,15 @@ begin
       begin
         ScrollInfo.fMask := SIF_POS;
         ScrollInfo.nPos := ScrollY;
-        SetScrollInfo(Handle, SB_VERT, ScrollInfo, True);
+        {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}SetScrollInfo(Handle, SB_VERT, ScrollInfo, True);
       end;
     end
     else // Scroll to the page to the left/top corner
     begin
       ScrollInfo.fMask := SIF_POS;
       ScrollInfo.nPos := 0;
-      SetScrollInfo(Handle, SB_VERT, ScrollInfo, True);
-      SetScrollInfo(Handle, SB_HORZ, ScrollInfo, True);
+      {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}SetScrollInfo(Handle, SB_VERT, ScrollInfo, True);
+      {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}SetScrollInfo(Handle, SB_HORZ, ScrollInfo, True);
     end;
     PageContentChanged(False);
     Result := True;
@@ -1680,7 +1712,7 @@ begin
   begin
     Clipboard.Open;
     try
-      if {$IFNDEF FPC}Clipboard.HasFormat(CF_UNICODETEXT) or{$ENDIF FPC} Clipboard.HasFormat(CF_TEXT) then
+      if {$IFNDEF FPC}Clipboard.HasFormat(CF_UNICODETEXT) or{$ENDIF ~FPC} Clipboard.HasFormat(CF_TEXT) then
         CurrentPage.FormReplaceSelection(Clipboard.AsText);
     finally
       Clipboard.Close;
@@ -1927,7 +1959,7 @@ end;
 procedure TPdfControl.KeyDown(var Key: Word; Shift: TShiftState);
 var
   XOffset, YOffset: Integer;
-  ScrollInfo: TScrollInfo;
+  ScrollInfo: {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}TScrollInfo;
 begin
   inherited KeyDown(Key, Shift);
   XOffset := 0;
@@ -1985,7 +2017,7 @@ begin
           else
             GotoPrevPage(True);
         end
-        else if GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
+        else if {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
         begin
           if Key = VK_NEXT then
           begin
@@ -2020,7 +2052,7 @@ begin
 
           if ssShift in Shift then
           begin
-            if GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
+            if {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
             begin
               if Key = VK_END then
                 XOffset := ScrollInfo.nMax
@@ -2030,7 +2062,7 @@ begin
           end
           else
           begin
-            if GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
+            if {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
             begin
               if Key = VK_END then
                 YOffset := ScrollInfo.nMax
@@ -2431,7 +2463,7 @@ var
   W, H: Integer;
   PageWidth, PageHeight: Double;
   DpiX, DpiY: Integer;
-  ScrollInfo: TScrollInfo;
+  ScrollInfo: {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}TScrollInfo;
   Style: NativeInt;
 begin
   Page := CurrentPage;
@@ -2478,7 +2510,7 @@ begin
     begin
       ScrollInfo.nMax := W;
       ScrollInfo.nPage := MaxWidth;
-      SetScrollInfo(Handle, SB_HORZ, ScrollInfo, True);
+      {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}SetScrollInfo(Handle, SB_HORZ, ScrollInfo, True);
     end
     else
     begin
@@ -2494,7 +2526,7 @@ begin
     begin
       ScrollInfo.nMax := H;
       ScrollInfo.nPage := MaxHeight;
-      SetScrollInfo(Handle, SB_VERT, ScrollInfo, True);
+      {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}SetScrollInfo(Handle, SB_VERT, ScrollInfo, True);
       ShowScrollBar(Handle, SB_VERT, True);
     end
     else
@@ -2515,7 +2547,7 @@ end;
 
 procedure TPdfControl.AdjustDrawPos;
 var
-  ScrollInfo: TScrollInfo;
+  ScrollInfo: {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}TScrollInfo;
   X, Y, HPos, VPos: Integer;
   Style: NativeInt;
   MaxWidth: Integer;
@@ -2532,13 +2564,13 @@ begin
   if (Style and WS_HSCROLL <> 0) then
   begin
     MaxHeight := MaxHeight - GetSystemMetrics(SM_CXHSCROLL);
-    if GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
+    if {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
       HPos := ScrollInfo.nPos;
   end;
   if (Style and WS_VSCROLL <> 0) then
   begin
     MaxWidth := MaxWidth - GetSystemMetrics(SM_CXVSCROLL);
-    if GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
+    if {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
       VPos := ScrollInfo.nPos;
   end;
 
@@ -2560,7 +2592,7 @@ end;
 
 function TPdfControl.ScrollContent(XOffset, YOffset: Integer; Smooth: Boolean): Boolean;
 var
-  ScrollInfo: TScrollInfo;
+  ScrollInfo: {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}TScrollInfo;
   X, Y: Integer;
   Style: NativeInt;
   Flags: UINT;
@@ -2573,24 +2605,24 @@ begin
   ScrollInfo.fMask := SIF_POS;
 
   // Vertical scroll
-  if (YOffset <> 0) and {$IFDEF FPC}{$IFDEF WINDOWS}(Style and WS_VSCROLL <> 0) and{$ENDIF WINDOWS}{$ELSE}(Style and WS_VSCROLL <> 0) and{$ENDIF FPC} GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
+  if (YOffset <> 0) and {$IFNDEF FPC_UNIX}(Style and WS_VSCROLL <> 0) and Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
   begin
     Y := ScrollInfo.nPos;
     ScrollInfo.nPos := Y + YOffset;
-    SetScrollInfo(Handle, SB_VERT, ScrollInfo, True);
-    GetScrollInfo(Handle, SB_VERT, ScrollInfo); // let Windows do the range checking
+    {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}SetScrollInfo(Handle, SB_VERT, ScrollInfo, True);
+    {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_VERT, ScrollInfo); // let Windows do the range checking
     YOffset := Y - ScrollInfo.nPos;
   end
   else
     YOffset := 0;
 
   // Horizontal scroll
-  if (XOffset <> 0) and {$IFDEF FPC}{$IFDEF WINDOWS}(Style and WS_HSCROLL <> 0) and{$ENDIF WINDOWS}{$ELSE}(Style and WS_HSCROLL <> 0) and{$ENDIF FPC} GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
+  if (XOffset <> 0) and {$IFNDEF FPC_UNIX}(Style and WS_HSCROLL <> 0) and Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
   begin
     X := ScrollInfo.nPos;
     ScrollInfo.nPos := X + XOffset;
-    SetScrollInfo(Handle, SB_HORZ, ScrollInfo, True);
-    GetScrollInfo(Handle, SB_HORZ, ScrollInfo); // let Windows do the range checking
+    {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}SetScrollInfo(Handle, SB_HORZ, ScrollInfo, True);
+    {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_HORZ, ScrollInfo); // let Windows do the range checking
     XOffset := X - ScrollInfo.nPos;
   end
   else
@@ -2612,28 +2644,28 @@ end;
 
 function TPdfControl.ScrollContentTo(X, Y: Integer; Smooth: Boolean = False): Boolean;
 var
-  ScrollInfo: TScrollInfo;
+  ScrollInfo: {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}TScrollInfo;
   XOffset, YOffset: Integer;
 begin
   XOffset := 0;
   YOffset := 0;
   ScrollInfo.cbSize := SizeOf(ScrollInfo);
   ScrollInfo.fMask := SIF_POS;
-  if GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
+  if {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_HORZ, ScrollInfo) then
     XOffset := X - ScrollInfo.nPos;
-  if GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
+  if {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_VERT, ScrollInfo) then
     YOffset := Y - ScrollInfo.nPos;
   Result := ScrollContent(XOffset, YOffset, Smooth);
 end;
 
 procedure TPdfControl.WMVScroll(var Message: TWMVScroll);
 var
-  ScrollInfo: TScrollInfo;
+  ScrollInfo: {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}TScrollInfo;
   Offset: Integer;
 begin
   ScrollInfo.cbSize := SizeOf(ScrollInfo);
   ScrollInfo.fMask := SIF_ALL;
-  GetScrollInfo(Handle, SB_VERT, ScrollInfo);
+  {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_VERT, ScrollInfo);
   Offset := 0;
   case Message.ScrollCode of
     SB_LINEUP:
@@ -2653,12 +2685,12 @@ end;
 
 procedure TPdfControl.WMHScroll(var Message: TWMHScroll);
 var
-  ScrollInfo: TScrollInfo;
+  ScrollInfo: {$IFNDEF FPC_UNIX}Windows.{$ENDIF FPC_UNIX}TScrollInfo;
   Offset: Integer;
 begin
   ScrollInfo.cbSize := SizeOf(ScrollInfo);
   ScrollInfo.fMask := SIF_ALL;
-  GetScrollInfo(Handle, SB_HORZ, ScrollInfo);
+  {$IFNDEF FPC_UNIX}Windows.{$ENDIF ~FPC_UNIX}GetScrollInfo(Handle, SB_HORZ, ScrollInfo);
   Offset := 0;
   case Message.ScrollCode of
     SB_LINELEFT:
@@ -2872,6 +2904,40 @@ begin
       PageIndex := Document.PageCount - 1;
   end;
 end;
+
+{$IFDEF FPC}
+  {$IFDEF MSWINDOWS}
+    procedure UnloadMsimg32Dll;
+    begin
+      @_AlphaBlend := nil;
+      if GMsimg32Handle > 0 then
+        FreeLibrary(GMsimg32Handle);
+      GMsimg32Handle := 0;
+    end;
+
+    procedure LoadMsimg32Dll;
+    begin
+      GTriedLoadMsimg32Dll := True;
+      GMsimg32Handle := SafeLoadLibrary(Msimg32DLLName);
+      if GMsimg32Handle <> 0 then
+      begin
+        @_AlphaBlend := GetProcAddress(GMsimg32Handle, AlphaBlendName);
+      end;
+    end;
+
+    function AlphaBlend(hdcDest: HDC; nXOriginDest, nYOriginDest, nWidthDest,
+      nHeightDest: Integer; hdcSrc: HDC; nXOriginSrc, nYOriginSrc, nWidthSrc,
+      nHeightSrc: Integer; BlendFunction: BLENDFUNCTION): BOOL; stdcall;
+    begin
+      if not GTriedLoadMsimg32Dll then
+        LoadMsimg32Dll;
+      Result := Assigned(_AlphaBlend) and
+        _AlphaBlend(hdcDest, nXOriginDest, nYOriginDest, nWidthDest, nHeightDest, hdcSrc,
+          nXOriginSrc, nYOriginSrc, nWidthSrc, nHeightSrc, BlendFunction);
+    end;
+
+  {$ENDIF MSWINDOWS}
+{$ENDIF FPC}
 
 end.
 
