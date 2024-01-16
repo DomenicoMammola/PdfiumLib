@@ -12,6 +12,8 @@ unit PdfiumCore;
   {$STRINGCHECKS OFF}
 {$ENDIF ~FPC}
 
+{$DEFINE FPC_BE_CROSSPLATFORM}
+
 
 interface
 
@@ -22,8 +24,11 @@ uses
   Windows, //WinSpool,
   {$ENDIF MSWINDOWS}
   {$IFDEF FPC_UNIX}
-  Graphics, LCLType, LCLIntf,
+  LCLType, LCLIntf,
   {$ENDIF FPC_UNIX}
+  {$IFDEF FPC_BE_CROSSPLATFORM}
+  Graphics, IntfGraphics, GraphType,
+  {$ENDIF FPC_BE_CROSSPLATFORM}
   ExtCtrls, Types, SysUtils, Classes, Contnrs,
   PdfiumLib;
 
@@ -2389,17 +2394,22 @@ end;
 procedure TPdfPage.Draw(DC: HDC; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation;
   const Options: TPdfPageRenderOptions; PageBackground: TColorRef);
 var
-  BitmapInfo: TBitmapInfo;
   Bmp, OldBmp: HBITMAP;
   BmpBits: Pointer;
   PdfBmp: TPdfBitmap;
   BmpDC: HDC;
-  {$IFDEF FPC_UNIX}
+  {$IFDEF FPC_BE_CROSSPLATFORM}
   tmpBitmap: TBitmap;
+  tmpLazImage : TLazIntfImage;
   Canvas: TCanvas;
-  PixelsArray :  packed array of byte;
-  r, c, p : integer;
-  {$ENDIF FPC_UNIX}
+  ImgHandle,ImgMaskHandle: HBitmap;
+  //LazCanvas : TLazCanvas;
+  //PixelsArray :  packed array of byte;
+  //r, c, p : integer;
+  {$ENDIF FPC_BE_CROSSPLATFORM}
+  {$IFNDEF FPC_UNIX}
+  BitmapInfo: TBitmapInfo;
+  {$ENDIF ~FPC_UNIX}
 begin
   Open;
 
@@ -2420,21 +2430,46 @@ begin
   {$ENDIF MSWINDOWS}
 
 
-  FillChar(BitmapInfo, SizeOf(BitmapInfo), 0);
-  BitmapInfo.bmiHeader.biSize := SizeOf(TBitmapInfoHeader); //(BitmapInfo);
-  BitmapInfo.bmiHeader.biWidth := Width;
-  BitmapInfo.bmiHeader.biHeight := -Height;
-  BitmapInfo.bmiHeader.biPlanes := 1;
-  BitmapInfo.bmiHeader.biBitCount := 32;
-  BitmapInfo.bmiHeader.biCompression := BI_RGB;
-  BitmapInfo.bmiHeader.biSizeImage:= Width * Height * 4;
+  {$IFDEF FPC_BE_CROSSPLATFORM}
+    tmpBitmap := TBitmap.Create;
+    tmpLazImage := TLazIntfImage.Create(0, 0);
+    try
+      tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(Width, Height);
+      tmpLazImage.CreateData;
+      PdfBmp := TPdfBitmap.Create(Width, Height, bfBGRA, tmpLazImage.PixelData, Width * 4);
+      try
+        PdfBmp.FillRect(0, 0, Width, Height, $FF000000 or PageBackground);
+        DrawToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+        DrawFormToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
 
-  {$IFDEF FPC_UNIX}
+        Canvas:= TCanvas.Create;
+        try
+          Canvas.Handle:= DC;
+          Canvas.Brush.Color:= PageBackground;
+          Canvas.FillRect(0, 0, Width - 1, Height - 1);
+          tmpLazImage.CreateBitmaps(ImgHandle,ImgMaskHandle,false);
+          tmpBitmap.Handle:=ImgHandle;
+          tmpBitmap.MaskHandle:=ImgMaskHandle;
+          Canvas.Draw(X, Y, tmpBitmap);
+        finally
+          Canvas.Free;
+        end;
+      finally
+        PdfBmp.Free;
+      end;
+
+    finally
+      tmpLazImage.Free;
+      tmpBitmap.Free;
+    end;
+
+    (*
+
+
     tmpBitmap := TBitmap.Create; // use TLazIntfImage?
     try
       tmpBitmap.Width:= Width;
       tmpBitmap.Height:= Height;
-      //tmpBitmap.PixelFormat:= pf32bit;
       SetLength(PixelsArray, Width * Height * 3);
 
       PdfBmp := TPdfBitmap.Create(Width, Height, bfBGR, PixelsArray, Width * 3); // tmpBitmap.RawImage.Data
@@ -2465,10 +2500,20 @@ begin
         PdfBmp.Free;
       end;
     finally
-      tmpBitmap.FreeImage;
+      tmpBitmap.Free;
     end;
+    *)
 
   {$ELSE}
+    FillChar(BitmapInfo, SizeOf(BitmapInfo), 0);
+    BitmapInfo.bmiHeader.biSize := SizeOf(TBitmapInfoHeader); //(BitmapInfo);
+    BitmapInfo.bmiHeader.biWidth := Width;
+    BitmapInfo.bmiHeader.biHeight := -Height;
+    BitmapInfo.bmiHeader.biPlanes := 1;
+    BitmapInfo.bmiHeader.biBitCount := 32;
+    BitmapInfo.bmiHeader.biCompression := BI_RGB;
+    BitmapInfo.bmiHeader.biSizeImage:= Width * Height * 4;
+
     BmpBits := nil;
     Bmp := CreateDIBSection(DC, BitmapInfo, DIB_RGB_COLORS, BmpBits, 0, 0);
     if Bmp <> 0 then
@@ -2492,7 +2537,7 @@ begin
         DeleteObject(Bmp);
       end;
     end;
-  {$ENDIF LINUX}
+  {$ENDIF FPC_UNIX}
 end;
 
 procedure TPdfPage.DrawToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer;
