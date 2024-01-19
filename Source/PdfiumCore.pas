@@ -510,6 +510,10 @@ type
 
     procedure Draw(DC: HDC; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
       const Options: TPdfPageRenderOptions = []; PageBackground: TColorRef = $FFFFFF);
+    {$IFDEF FPC_BE_CROSSPLATFORM}
+    procedure DrawToCanvas(C: TCanvas; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
+      const Options: TPdfPageRenderOptions = []; PageBackground: TColorRef = $FFFFFF);
+    {$ENDIF ~FPC_BE_CROSSPLATFORM}
     procedure DrawToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
       const Options: TPdfPageRenderOptions = []);
     procedure DrawFormToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
@@ -2394,18 +2398,13 @@ end;
 procedure TPdfPage.Draw(DC: HDC; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation;
   const Options: TPdfPageRenderOptions; PageBackground: TColorRef);
 var
+  {$IFDEF FPC_BE_CROSSPLATFORM}
+  Canvas: TCanvas;
+  {$ELSE}
   Bmp, OldBmp: HBITMAP;
   BmpBits: Pointer;
   PdfBmp: TPdfBitmap;
   BmpDC: HDC;
-  {$IFDEF FPC_BE_CROSSPLATFORM}
-  tmpBitmap: TBitmap;
-  tmpLazImage : TLazIntfImage;
-  Canvas: TCanvas;
-  ImgHandle,ImgMaskHandle: HBitmap;
-  //LazCanvas : TLazCanvas;
-  //PixelsArray :  packed array of byte;
-  //r, c, p : integer;
   {$ENDIF FPC_BE_CROSSPLATFORM}
   {$IFNDEF FPC_UNIX}
   BitmapInfo: TBitmapInfo;
@@ -2431,79 +2430,16 @@ begin
 
 
   {$IFDEF FPC_BE_CROSSPLATFORM}
-    tmpBitmap := TBitmap.Create;
-    tmpLazImage := TLazIntfImage.Create(0, 0);
+    Canvas:= TCanvas.Create;
     try
-      tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(Width, Height);
-      tmpLazImage.CreateData;
-      PdfBmp := TPdfBitmap.Create(Width, Height, bfBGRA, tmpLazImage.PixelData, Width * 4);
-      try
-        PdfBmp.FillRect(0, 0, Width, Height, $FF000000 or PageBackground);
-        DrawToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
-        DrawFormToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+      Canvas.Handle:= DC;
+      Canvas.Brush.Color:= PageBackground;
+      Canvas.FillRect(0, 0, Width - 1, Height - 1);
 
-        Canvas:= TCanvas.Create;
-        try
-          Canvas.Handle:= DC;
-          Canvas.Brush.Color:= PageBackground;
-          Canvas.FillRect(0, 0, Width - 1, Height - 1);
-          tmpLazImage.CreateBitmaps(ImgHandle,ImgMaskHandle,false);
-          tmpBitmap.Handle:=ImgHandle;
-          tmpBitmap.MaskHandle:=ImgMaskHandle;
-          Canvas.Draw(X, Y, tmpBitmap);
-        finally
-          Canvas.Free;
-        end;
-      finally
-        PdfBmp.Free;
-      end;
-
+      DrawToCanvas(Canvas, X, Y, Width, Height, Rotate, Options, PageBackground);
     finally
-      tmpLazImage.Free;
-      tmpBitmap.Free;
+      Canvas.Free;
     end;
-
-    (*
-
-
-    tmpBitmap := TBitmap.Create; // use TLazIntfImage?
-    try
-      tmpBitmap.Width:= Width;
-      tmpBitmap.Height:= Height;
-      SetLength(PixelsArray, Width * Height * 3);
-
-      PdfBmp := TPdfBitmap.Create(Width, Height, bfBGR, PixelsArray, Width * 3); // tmpBitmap.RawImage.Data
-      try
-        PdfBmp.FillRect(0, 0, Width, Height, $FF000000 or PageBackground);
-        DrawToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
-        DrawFormToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
-
-        p := 0;
-        for r := 0 to Height - 1 do
-        begin
-          for c := 0 to Width - 1 do
-          begin
-            tmpBitmap.Canvas.Pixels[c, r] := RGBToColor(PixelsArray[p+2], PixelsArray[p+1], PixelsArray[p]);
-            inc(p, 3);
-          end;
-        end;
-        Canvas:= TCanvas.Create;
-        try
-          Canvas.Handle:= DC;
-          Canvas.Brush.Color:= PageBackground;
-          Canvas.FillRect(0, 0, Width - 1, Height - 1);
-          Canvas.Draw(X, Y, tmpBitmap);
-        finally
-          Canvas.Free;
-        end;
-      finally
-        PdfBmp.Free;
-      end;
-    finally
-      tmpBitmap.Free;
-    end;
-    *)
-
   {$ELSE}
     FillChar(BitmapInfo, SizeOf(BitmapInfo), 0);
     BitmapInfo.bmiHeader.biSize := SizeOf(TBitmapInfoHeader); //(BitmapInfo);
@@ -2539,6 +2475,41 @@ begin
     end;
   {$ENDIF FPC_UNIX}
 end;
+
+{$IFDEF FPC_BE_CROSSPLATFORM}
+procedure TPdfPage.DrawToCanvas(C: TCanvas; X, Y, Width, Height: Integer;
+  Rotate: TPdfPageRotation; const Options: TPdfPageRenderOptions;
+  PageBackground: TColorRef);
+var
+  tmpBitmap: TBitmap;
+  tmpLazImage : TLazIntfImage;
+  ImgHandle,ImgMaskHandle: HBitmap;
+  PdfBmp: TPdfBitmap;
+begin
+  tmpBitmap := TBitmap.Create;
+  tmpLazImage := TLazIntfImage.Create(0, 0);
+  try
+    tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(Width, Height);
+    tmpLazImage.CreateData;
+    PdfBmp := TPdfBitmap.Create(Width, Height, bfBGRA, tmpLazImage.PixelData, Width * 4);
+    try
+      PdfBmp.FillRect(0, 0, Width, Height, $FF000000 or PageBackground);
+      DrawToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+      DrawFormToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+
+      tmpLazImage.CreateBitmaps(ImgHandle,ImgMaskHandle,false);
+      tmpBitmap.Handle:=ImgHandle;
+      tmpBitmap.MaskHandle:=ImgMaskHandle;
+      C.Draw(X, Y, tmpBitmap);
+    finally
+      PdfBmp.Free;
+    end;
+  finally
+    tmpLazImage.Free;
+    tmpBitmap.Free;
+  end;
+end;
+{$ENDIF FPC_BE_CROSSPLATFORM}
 
 procedure TPdfPage.DrawToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer;
   Rotate: TPdfPageRotation; const Options: TPdfPageRenderOptions);
@@ -2664,8 +2635,8 @@ begin
   Result := FPageLinkHandle <> nil;
 end;
 
-function TPdfPage.BeginFind(const SearchString: string; MatchCase, MatchWholeWord,
-  FromEnd: Boolean): Boolean;
+function TPdfPage.BeginFind(const SearchString: string; MatchCase,
+  MatchWholeWord: Boolean; FromEnd: Boolean): Boolean;
 var
   Flags, StartIndex: Integer;
 begin

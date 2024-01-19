@@ -1,11 +1,13 @@
 unit mainfrm2;
 
+{$DEFINE LCL_CTRL}
+
 interface
 
 uses
   SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, PdfiumCore, ExtCtrls, StdCtrls, PdfiumCtrl,
-  Spin, ComCtrls, PrintersDlgs;
+  Spin, ComCtrls, PrintersDlgs, PdfiumLclCtrl;
 
 type
   TfrmMain = class(TForm)
@@ -38,7 +40,7 @@ type
     procedure btnAddAnnotationClick(Sender: TObject);
   private
     { Private-Deklarationen }
-    FCtrl: TPdfControl;
+    FCtrl: TLCLPdfControl;
     procedure WebLinkClick(Sender: TObject; Url: String);
     procedure AnnotationLinkClick(Sender: TObject; LinkInfo: TPdfLinkInfo; var Handled: Boolean);
     procedure PrintDocument(Sender: TObject);
@@ -66,23 +68,25 @@ begin
   PDFiumDllDir := ExtractFilePath(ParamStr(0)) + 'x86';
   {$ENDIF CPUX64}
 
-  FCtrl := TPdfControl.Create(Self);
+  FCtrl := TLCLPdfControl.Create(Self);
   FCtrl.Align := alClient;
   FCtrl.Parent := Self;
   FCtrl.SendToBack; // put the control behind the buttons
   FCtrl.Color := clGray;
   {$IFDEF UNIX}
+  {$IFNDEF LCL_CTRL}
   FCtrl.BufferedPageDraw := false;
+  {$ENDIF}
   {$ENDIF}
   //FCtrl.Color := clWhite;
   //FCtrl.PageBorderColor := clBlack;
   //FCtrl.PageShadowColor := clDkGray;
   FCtrl.ScaleMode := smFitWidth;
   //FCtrl.PageColor := RGB(255, 255, 200);
-  FCtrl.OnWebLinkClick := @WebLinkClick; // disabled due to loTreatWebLinkAsUriAnnotationLink + loAutoOpenURI
-  FCtrl.OnAnnotationLinkClick := @AnnotationLinkClick;
-  FCtrl.LinkOptions := FCtrl.LinkOptions - [loAutoOpenURI] {+ cPdfControlAllAutoLinkOptions};
-  FCtrl.OnPrintDocument := @PrintDocument;
+  //FCtrl.OnWebLinkClick := @WebLinkClick; // disabled due to loTreatWebLinkAsUriAnnotationLink + loAutoOpenURI
+  //FCtrl.OnAnnotationLinkClick := @AnnotationLinkClick;
+  //FCtrl.LinkOptions := FCtrl.LinkOptions - [loAutoOpenURI] {+ cPdfControlAllAutoLinkOptions};
+  //FCtrl.OnPrintDocument := @PrintDocument;
 
   edtZoom.Value := FCtrl.ZoomPercentage;
 
@@ -176,20 +180,27 @@ end;
 
 procedure TfrmMain.chkChangePageOnMouseScrollingClick(Sender: TObject);
 begin
+  {$IFNDEF LCL_CTRL}
   FCtrl.ChangePageOnMouseScrolling := chkChangePageOnMouseScrolling.Checked;
+  {$ENDIF}
+
 end;
 
 procedure TfrmMain.chkLCDOptimizeClick(Sender: TObject);
 begin
+  {$IFNDEF LCL_CTRL}
   if chkLCDOptimize.Checked then
     FCtrl.DrawOptions := FCtrl.DrawOptions + [proLCDOptimized]
   else
     FCtrl.DrawOptions := FCtrl.DrawOptions - [proLCDOptimized];
+  {$ENDIF}
 end;
 
 procedure TfrmMain.chkSmoothScrollClick(Sender: TObject);
 begin
+  {$IFNDEF LCL_CTRL}
   FCtrl.SmoothScroll := chkSmoothScroll.Checked;
+  {$ENDIF}
 end;
 
 procedure TfrmMain.edtZoomChange(Sender: TObject);
@@ -201,6 +212,7 @@ procedure TfrmMain.btnPrintClick(Sender: TObject);
 {var
   PdfPrinter: TPdfDocumentPrinter;}
 begin
+  {$IFNDEF LCL_CTRL}
   FCtrl.PrintDocument; // calls OnPrintDocument->PrintDocument
   //TPdfDocumentVclPrinter.PrintDocument(FCtrl.Document, 'PDF Example Print Job');
 
@@ -221,6 +233,7 @@ begin
       PdfPrinter.Free;
     end;
   end;}
+  {$ENDIF}
 end;
 
 procedure TfrmMain.ListViewAttachmentsDblClick(Sender: TObject);
@@ -238,6 +251,7 @@ end;
 
 procedure TfrmMain.btnAddAnnotationClick(Sender: TObject);
 begin
+  {$IFNDEF LCL_CTRL}
   // Add a new annotation and make it persietent so that is can be shown and saved to a file.
   FCtrl.CurrentPage.Annotations.NewTextAnnotation('My Annotation Text', TPdfRect.New(200, 750, 250, 700));
   FCtrl.CurrentPage.ApplyChanges;
@@ -245,6 +259,7 @@ begin
 
   // Invalid the buffered image of the page
   FCtrl.InvalidatePage;
+  {$ENDIF}
 end;
 
 end.
