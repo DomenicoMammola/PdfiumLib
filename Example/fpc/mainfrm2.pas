@@ -81,7 +81,7 @@ begin
   //FCtrl.Color := clWhite;
   //FCtrl.PageBorderColor := clBlack;
   //FCtrl.PageShadowColor := clDkGray;
-  FCtrl.ScaleMode := smFitWidth;
+  FCtrl.ScaleMode := smFitAuto;
   //FCtrl.PageColor := RGB(255, 255, 200);
   //FCtrl.OnWebLinkClick := @WebLinkClick; // disabled due to loTreatWebLinkAsUriAnnotationLink + loAutoOpenURI
   //FCtrl.OnAnnotationLinkClick := @AnnotationLinkClick;
