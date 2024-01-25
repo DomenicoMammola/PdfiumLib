@@ -2654,7 +2654,7 @@ begin
     else
       StartIndex := 0;
 
-    FSearchHandle := FPDFText_FindStart(FTextHandle, PWideChar(SearchString), Flags, StartIndex);
+    FSearchHandle := FPDFText_FindStart(FTextHandle, PWideChar({$IFDEF FPC}UnicodeString(SearchString){$ELSE}SearchString{$ENDIF FPC}), Flags, StartIndex);
   end;
   Result := FSearchHandle <> nil;
 end;

@@ -7,7 +7,7 @@ interface
 uses
   SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, PdfiumCore, ExtCtrls, StdCtrls, PdfiumCtrl,
-  Spin, ComCtrls, PrintersDlgs;
+  Spin, ComCtrls, PrintersDlgs, PdfiumLclCtrl;
 
 type
 
@@ -44,7 +44,7 @@ type
     procedure btnAddAnnotationClick(Sender: TObject);
   private
     { Private-Deklarationen }
-    FCtrl: TPdfControl;
+    FCtrl: TLCLPdfControl;
     procedure WebLinkClick(Sender: TObject; Url: String);
     procedure AnnotationLinkClick(Sender: TObject; LinkInfo: TPdfLinkInfo; var Handled: Boolean);
     procedure PrintDocument(Sender: TObject);
@@ -72,7 +72,7 @@ begin
   PDFiumDllDir := ExtractFilePath(ParamStr(0)) + 'x86';
   {$ENDIF CPUX64}
 
-  FCtrl := TPdfControl.Create(Self);
+  FCtrl := TLCLPdfControl.Create(Self);
   FCtrl.Align := alClient;
   FCtrl.Parent := Self;
   FCtrl.SendToBack; // put the control behind the buttons
@@ -82,7 +82,7 @@ begin
   FCtrl.BufferedPageDraw := false;
   {$ENDIF}
   {$ENDIF}
-  FCtrl.Color := clWhite;
+  //FCtrl.Color := clWhite;
   //FCtrl.PageBorderColor := clBlack;
   //FCtrl.PageShadowColor := clDkGray;
   FCtrl.ScaleMode := smFitAuto;
