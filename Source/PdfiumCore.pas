@@ -22,6 +22,9 @@ uses
     {$ENDIF FPC}
   ExtCtrls,
   {$ENDIF MSWINDOWS}
+  {$IFDEF FPC}
+  Graphics, IntfGraphics,
+  {$ENDIF FPC}
   Types, SysUtils, Classes, Contnrs,
   PdfiumLib;
 
@@ -501,6 +504,10 @@ type
       const Options: TPdfPageRenderOptions = []);
     procedure DrawFormToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
       const Options: TPdfPageRenderOptions = []);
+    {$IFDEF FPC}
+    procedure DrawToCanvas(C: TCanvas; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
+      const Options: TPdfPageRenderOptions = []; PageBackground: TColorRef = $FFFFFF);
+    {$ENDIF FPC}
 
     function DeviceToPage(X, Y, Width, Height: Integer; DeviceX, DeviceY: Integer; Rotate: TPdfPageRotation = prNormal): TPdfPoint; overload;
     function PageToDevice(X, Y, Width, Height: Integer; PageX, PageY: Double; Rotate: TPdfPageRotation = prNormal): TPoint; overload;
@@ -2467,6 +2474,39 @@ begin
   end;
 end;
 
+{$IFDEF FPC}
+procedure TPdfPage.DrawToCanvas(C: TCanvas; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation; const Options: TPdfPageRenderOptions; PageBackground: TColorRef);
+var
+  tmpBitmap: TBitmap;
+  tmpLazImage : TLazIntfImage;
+  ImgHandle,ImgMaskHandle: HBitmap;
+  PdfBmp: TPdfBitmap;
+begin
+  tmpBitmap := TBitmap.Create;
+  tmpLazImage := TLazIntfImage.Create(0, 0);
+  try
+    tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(Width, Height);
+    tmpLazImage.CreateData;
+    PdfBmp := TPdfBitmap.Create(Width, Height, bfBGRA, tmpLazImage.PixelData, Width * 4);
+    try
+      PdfBmp.FillRect(0, 0, Width, Height, $FF000000 or PageBackground);
+      DrawToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+      DrawFormToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+
+      tmpLazImage.CreateBitmaps(ImgHandle,ImgMaskHandle,false);
+      tmpBitmap.Handle:=ImgHandle;
+      tmpBitmap.MaskHandle:=ImgMaskHandle;
+      C.Draw(X, Y, tmpBitmap);
+    finally
+      PdfBmp.Free;
+    end;
+  finally
+    tmpLazImage.Free;
+    tmpBitmap.Free;
+  end;
+end;
+{$ENDIF FPC}
+
 procedure TPdfPage.UpdateMetrics;
 begin
   FWidth := FPDF_GetPageWidthF(FPage);
@@ -2562,8 +2602,7 @@ begin
   Result := FPageLinkHandle <> nil;
 end;
 
-function TPdfPage.BeginFind(const SearchString: string; MatchCase, MatchWholeWord,
-  FromEnd: Boolean): Boolean;
+function TPdfPage.BeginFind(const SearchString: string; MatchCase, MatchWholeWord: Boolean; FromEnd: Boolean): Boolean;
 var
   Flags, StartIndex: Integer;
 begin

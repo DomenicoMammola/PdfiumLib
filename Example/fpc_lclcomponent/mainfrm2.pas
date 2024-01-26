@@ -6,7 +6,7 @@ interface
 
 uses
   SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, PdfiumCore, ExtCtrls, StdCtrls, PdfiumCtrl,
+  Controls, Forms, Dialogs, PdfiumCore, ExtCtrls, StdCtrls,
   Spin, ComCtrls, PrintersDlgs, PdfiumLclCtrl;
 
 type
@@ -180,32 +180,27 @@ end;
 
 procedure TfrmMain.PrintDocument(Sender: TObject);
 begin
-  TPdfDocumentVclPrinter.PrintDocument(FCtrl.Document, ExtractFileName(FCtrl.Document.FileName));
+  //TPdfDocumentVclPrinter.PrintDocument(FCtrl.Document, ExtractFileName(FCtrl.Document.FileName));
 end;
 
 procedure TfrmMain.chkChangePageOnMouseScrollingClick(Sender: TObject);
 begin
-  {$IFNDEF LCL_CTRL}
-  FCtrl.ChangePageOnMouseScrolling := chkChangePageOnMouseScrolling.Checked;
-  {$ENDIF}
-
+  //FCtrl.ChangePageOnMouseScrolling := chkChangePageOnMouseScrolling.Checked;
 end;
 
 procedure TfrmMain.chkLCDOptimizeClick(Sender: TObject);
 begin
-  {$IFNDEF LCL_CTRL}
+  (*
   if chkLCDOptimize.Checked then
     FCtrl.DrawOptions := FCtrl.DrawOptions + [proLCDOptimized]
   else
     FCtrl.DrawOptions := FCtrl.DrawOptions - [proLCDOptimized];
-  {$ENDIF}
+    *)
 end;
 
 procedure TfrmMain.chkSmoothScrollClick(Sender: TObject);
 begin
-  {$IFNDEF LCL_CTRL}
-  FCtrl.SmoothScroll := chkSmoothScroll.Checked;
-  {$ENDIF}
+//  FCtrl.SmoothScroll := chkSmoothScroll.Checked;
 end;
 
 procedure TfrmMain.edtZoomChange(Sender: TObject);
@@ -217,7 +212,8 @@ procedure TfrmMain.btnPrintClick(Sender: TObject);
 {var
   PdfPrinter: TPdfDocumentPrinter;}
 begin
-  {$IFNDEF LCL_CTRL}
+  (*
+
   FCtrl.PrintDocument; // calls OnPrintDocument->PrintDocument
   //TPdfDocumentVclPrinter.PrintDocument(FCtrl.Document, 'PDF Example Print Job');
 
@@ -238,7 +234,7 @@ begin
       PdfPrinter.Free;
     end;
   end;}
-  {$ENDIF}
+  *)
 end;
 
 procedure TfrmMain.ListViewAttachmentsDblClick(Sender: TObject);

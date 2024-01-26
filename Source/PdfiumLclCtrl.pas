@@ -4,9 +4,15 @@ interface
 
 uses
   Classes, Controls, StdCtrls, Contnrs,
-  PdfiumCtrl, PdfiumCore;
+  PdfiumCore;
 
 type
+  TPdfControlScaleMode = (
+    smFitAuto,
+    smFitWidth,
+    smFitHeight,
+    smZoom
+  );
 
   TLCLPdfControlPdfRectShell = class
   public
@@ -402,7 +408,7 @@ end;
 
 procedure TLCLPdfControl.LoadFromFile(const FileName: String; const Password: String; LoadOption: TPdfDocumentLoadOption);
 begin
-  FDocument.LoadFromFile(FileName, Password, LoadOption);
+  FDocument.LoadFromFile(UnicodeString(FileName), Password, LoadOption);
   FHighlightTextRects.Clear;
   AdjustGeometry;
 end;
@@ -446,7 +452,7 @@ begin
   begin
     curPage := FDocument.Pages[FPageIndex];
 
-    if curPage.BeginFind(SearchText, MatchCase, MatchWholeWord, False) then
+    if curPage.BeginFind(UnicodeString(SearchText), MatchCase, MatchWholeWord, False) then
     begin
       try
         while curPage.FindNext(CharIndex, CharCount) do
