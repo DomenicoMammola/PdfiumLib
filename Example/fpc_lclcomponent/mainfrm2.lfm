@@ -90,34 +90,34 @@ object frmMain: TfrmMain
     end
     object chkChangePageOnMouseScrolling: TCheckBox
       Left = 675
-      Height = 17
+      Height = 21
       Top = 4
-      Width = 163
+      Width = 171
       Caption = 'ChangePageOnMouseScrolling'
       TabOrder = 9
       OnClick = chkChangePageOnMouseScrollingClick
     end
     object chkLCDOptimize: TCheckBox
       Left = 454
-      Height = 17
+      Height = 21
       Top = 4
-      Width = 78
+      Width = 86
       Caption = 'LCDOptimize'
       TabOrder = 6
       OnClick = chkLCDOptimizeClick
     end
     object chkSmoothScroll: TCheckBox
       Left = 534
-      Height = 17
+      Height = 21
       Top = 4
-      Width = 79
+      Width = 87
       Caption = 'SmoothScroll'
       TabOrder = 7
       OnClick = chkSmoothScrollClick
     end
     object edtZoom: TSpinEdit
       Left = 620
-      Height = 21
+      Height = 22
       Top = 2
       Width = 49
       MaxValue = 10000
@@ -128,7 +128,7 @@ object frmMain: TfrmMain
     end
     object Edit1: TEdit
       Left = 152
-      Height = 21
+      Height = 22
       Top = 4
       Width = 80
       TabOrder = 10

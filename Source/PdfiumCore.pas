@@ -2,6 +2,9 @@ unit PdfiumCore;
 
 {$IFDEF FPC}
   {$MODE DelphiUnicode}
+  {$IFDEF LINUX}
+    {$DEFINE FPC_LINUX}
+  {$ENDIF LINUX}
 {$ENDIF FPC}
 
 {$IFNDEF FPC}
@@ -497,9 +500,10 @@ type
     destructor Destroy; override;
     procedure Close;
     function IsLoaded: Boolean;
-
+    {$IFNDEF FPC_LINUX}
     procedure Draw(DC: HDC; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
       const Options: TPdfPageRenderOptions = []; PageBackground: TColorRef = $FFFFFF);
+    {$ENDIF ~FPC_LINUX}
     procedure DrawToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
       const Options: TPdfPageRenderOptions = []);
     procedure DrawFormToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
@@ -1604,7 +1608,7 @@ begin
           finally
             FreeAndNil(FFileStream);
           end;
-        end
+        end;
       dloOnDemand:
         LoadFromActiveStream(FFileStream, Password);
     end;
@@ -2385,6 +2389,7 @@ begin
     Result := Result or FPDF_REVERSE_BYTE_ORDER;
 end;
 
+{$IFNDEF FPC_LINUX}
 procedure TPdfPage.Draw(DC: HDC; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation;
   const Options: TPdfPageRenderOptions; PageBackground: TColorRef);
 var
@@ -2444,6 +2449,7 @@ begin
     end;
   end;
 end;
+{$ENDIF ~FPC_LINUX}
 
 procedure TPdfPage.DrawToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer;
   Rotate: TPdfPageRotation; const Options: TPdfPageRenderOptions);
@@ -4342,6 +4348,7 @@ end;
 
 procedure TPdfDocumentPrinter.GetPrinterBounds;
 begin
+  {$IFNDEF LINUX}
   FPaperSize.cx := GetDeviceCaps(FPrinterDC, PHYSICALWIDTH);
   FPaperSize.cy := GetDeviceCaps(FPrinterDC, PHYSICALHEIGHT);
 
@@ -4350,6 +4357,7 @@ begin
 
   FMargins.X := GetDeviceCaps(FPrinterDC, PHYSICALOFFSETX);
   FMargins.Y := GetDeviceCaps(FPrinterDC, PHYSICALOFFSETY);
+  {$ENDIF ~LINUX}
 end;
 
 function TPdfDocumentPrinter.BeginPrint(const AJobTitle: string): Boolean;
@@ -4515,11 +4523,13 @@ begin
   X := X + (Width - ScaledWidth) / 2;
   Y := Y + (Height - ScaledHeight) / 2;
 
+  {$IFNDEF FPC_LINUX}
   APage.Draw(
     FPrinterDC,
     RoundToInt(X), RoundToInt(Y), RoundToInt(ScaledWidth), RoundToInt(ScaledHeight),
     prNormal, [proPrinting, proAnnotations]
   );
+  {$ENDIF ~FPC_LINUX}
 end;
 
 initialization

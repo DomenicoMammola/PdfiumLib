@@ -65,11 +65,17 @@ uses
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 begin
+  {$IFDEF LINUX}
+  PDFiumDllFileName := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'libpdfium.so';
+  {$ELSE}
+  PDFiumDllFileName := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + '';
+  {$ENDIF LINUX}
+
   {$IFDEF CPUX64}
   //PDFiumDllDir := ExtractFilePath(ParamStr(0)) + 'x64\V8XFA';
-  PDFiumDllDir := ExtractFilePath(ParamStr(0)) + 'x64';
+  //PDFiumDllDir := ExtractFilePath(ParamStr(0)) + 'x64';
   {$ELSE}
-  PDFiumDllDir := ExtractFilePath(ParamStr(0)) + 'x86';
+  //PDFiumDllDir := ExtractFilePath(ParamStr(0)) + 'x86';
   {$ENDIF CPUX64}
 
   FCtrl := TLCLPdfControl.Create(Self);
