@@ -4348,7 +4348,7 @@ end;
 
 procedure TPdfDocumentPrinter.GetPrinterBounds;
 begin
-  {$IFNDEF LINUX}
+  {$IFNDEF FPC_LINUX}
   FPaperSize.cx := GetDeviceCaps(FPrinterDC, PHYSICALWIDTH);
   FPaperSize.cy := GetDeviceCaps(FPrinterDC, PHYSICALHEIGHT);
 
@@ -4357,7 +4357,7 @@ begin
 
   FMargins.X := GetDeviceCaps(FPrinterDC, PHYSICALOFFSETX);
   FMargins.Y := GetDeviceCaps(FPrinterDC, PHYSICALOFFSETY);
-  {$ENDIF ~LINUX}
+  {$ENDIF ~FPC_LINUX}
 end;
 
 function TPdfDocumentPrinter.BeginPrint(const AJobTitle: string): Boolean;
