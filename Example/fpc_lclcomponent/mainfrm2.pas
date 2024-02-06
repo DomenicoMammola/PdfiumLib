@@ -68,7 +68,7 @@ begin
   {$IFDEF LINUX}
   PDFiumDllFileName := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'libpdfium.so';
   {$ELSE}
-  PDFiumDllFileName := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + '';
+  PDFiumDllFileName := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'pdfium.dll';
   {$ENDIF LINUX}
 
   {$IFDEF CPUX64}
