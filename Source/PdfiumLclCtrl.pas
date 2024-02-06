@@ -4,6 +4,7 @@ interface
 
 uses
   Classes, Controls, StdCtrls, Contnrs,
+  LMessages,
   PdfiumCore;
 
 type
@@ -58,6 +59,7 @@ type
     procedure AdjustGeometry;
     procedure OnChangeHorizontalScrollbar(Sender: TObject);
     procedure OnChangeVerticalScrollbar(Sender: TObject);
+    procedure CMMouseWheel(var Message: TLMMouseEvent); message LM_MOUSEWHEEL;
   protected
     procedure Paint; override;
     procedure MouseMove(Shift: TShiftState; X,Y: Integer); override;
@@ -82,7 +84,7 @@ type
 implementation
 
 uses
-  Graphics, Math, Forms, LCLIntf;
+  Graphics, Math, Forms, LCLIntf, LCLType;
 
 // https://forum.lazarus.freepascal.org/index.php?topic=32648.0
 procedure DrawTransparentRectangle(Canvas: TCanvas; Rect: TRect; Color: TColor; Transparency: Integer);
@@ -159,6 +161,9 @@ end;
 
 procedure TLCLPdfControl.SetZoomPercentage(AValue: Integer);
 begin
+  if (FZoomPercentage < 1) or (FZoomPercentage > 1000) then
+    exit;
+
   if FZoomPercentage=AValue then Exit;
   FZoomPercentage:=AValue;
   AdjustGeometry;
@@ -261,6 +266,23 @@ end;
 procedure TLCLPdfControl.OnChangeVerticalScrollbar(Sender: TObject);
 begin
   Invalidate;
+end;
+
+procedure TLCLPdfControl.CMMouseWheel(var Message: TLMMouseEvent);
+var
+  direction : integer;
+begin
+  if Message.WheelDelta > 0 then
+    direction := -1
+  else
+    direction := 1;
+  if GetKeyState(VK_CONTROL) and $8000 <> 0 then  // CTRL pressed
+  begin
+    if FScaleMode = smZoom then
+      Self.SetZoomPercentage(FZoomPercentage + (direction * 10));
+  end
+  else
+    FVerticalScrollbar.Position := min(FVerticalScrollbar.Position + (direction * FVerticalScrollbar.PageSize), FVerticalScrollbar.Max - FVerticalScrollbar.PageSize);
 end;
 
 procedure TLCLPdfControl.Paint;
