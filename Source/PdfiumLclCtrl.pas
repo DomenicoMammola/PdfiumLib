@@ -43,7 +43,7 @@ type
     FPageIndex: Integer;
     FPageWidth: Integer;
     FPageHeight : Integer;
-    FX, FY : Integer;
+    FViewportX, FViewportY : Integer;
     FHorizontalScrollbar : TScrollbar;
     FVerticalScrollbar : TScrollBar;
     FHighlightTextRects : TLCLPdfControlPdfRects;
@@ -53,6 +53,8 @@ type
     FAllowFormEvents : Boolean;
 
     procedure FormInvalidate(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
+    procedure FormOutputSelectedRect(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
+    procedure FormGetCurrentPage(Document: TPdfDocument; var Page: TPdfPage);
 
     procedure SetScaleMode(AValue: TPdfControlScaleMode);
     procedure SetZoomPercentage(AValue: Integer);
@@ -60,10 +62,18 @@ type
     procedure OnChangeHorizontalScrollbar(Sender: TObject);
     procedure OnChangeVerticalScrollbar(Sender: TObject);
     procedure CMMouseWheel(var Message: TLMMouseEvent); message LM_MOUSEWHEEL;
+    procedure CMMouseleave(var Message: TlMessage); message LM_MOUSELEAVE;
+    procedure WMKeyDown(var Message: TLMKeyDown); message LM_KEYDOWN;
+    procedure WMKeyUp(var Message: TLMKeyUp); message LM_KEYUP;
+    procedure WMChar(var Message: TLMChar); message LM_CHAR;
+    procedure WMKillFocus(var Message: TLMKillFocus); message LM_KILLFOCUS;
+    function PageX : integer;
+    function PageY : integer;
   protected
     procedure Paint; override;
     procedure MouseMove(Shift: TShiftState; X,Y: Integer); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X: Integer; Y: Integer); override;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X: Integer; Y: Integer); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -151,6 +161,16 @@ begin
   Invalidate;
 end;
 
+procedure TLCLPdfControl.FormOutputSelectedRect(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
+begin
+  WriteLn('ok');
+end;
+
+procedure TLCLPdfControl.FormGetCurrentPage(Document: TPdfDocument; var Page: TPdfPage);
+begin
+  Page := FDocument.Pages[FPageIndex];
+end;
+
 procedure TLCLPdfControl.SetScaleMode(AValue: TPdfControlScaleMode);
 begin
   if FScaleMode=AValue then Exit;
@@ -161,7 +181,7 @@ end;
 
 procedure TLCLPdfControl.SetZoomPercentage(AValue: Integer);
 begin
-  if (FZoomPercentage < 1) or (FZoomPercentage > 1000) then
+  if (AValue < 1) or (AValue > 1000) then
     exit;
 
   if FZoomPercentage=AValue then Exit;
@@ -201,15 +221,15 @@ begin
       begin
         FPageWidth := ClientRect.Width;
         FPageHeight := min(ClientRect.Height, round(FPageWidth * curPage.Height / curPage.Width));
-        FX := 0;
-        FY := (ClientHeight - FPageHeight) div 2;
+        FViewportX := 0;
+        FViewportY := (ClientHeight - FPageHeight) div 2;
       end
       else
       begin
         FPageHeight := Self.ClientRect.Height;
         FPageWidth := min(Self.ClientRect.Width, round(FPageHeight * curPage.Width / curPage.Height));
-        FX := (Self.ClientRect.Width - FPageWidth) div 2;
-        FY := 0;
+        FViewportX := (Self.ClientRect.Width - FPageWidth) div 2;
+        FViewportY := 0;
       end;
     end
     else if FScaleMode = smFitWidth then
@@ -219,11 +239,11 @@ begin
       FHorizontalScrollbar.Visible := false;
       FVerticalScrollbar.Visible := FPageHeight > Self.ClientRect.Height;
       AdjustScrollbar(FVerticalScrollbar, Self.ClientRect.Height, FPageHeight);
-      FX := 0;
-      FY := (ClientRect.Height - FPageHeight) div 2;
+      FViewportX := 0;
+      FViewportY := (ClientRect.Height - FPageHeight) div 2;
       if FHorizontalScrollbar.Visible then
-        FY := FY - FHorizontalScrollbar.Height;
-      FY := max(0, FY);
+        FViewportY := FViewportY - FHorizontalScrollbar.Height;
+      FViewportY := max(0, FViewportY);
     end
     else if FScaleMode = smFitHeight then
     begin
@@ -232,28 +252,28 @@ begin
       FVerticalScrollbar.Visible := false;
       FHorizontalScrollbar.Visible := FPageWidth > Self.ClientWidth;
       AdjustScrollbar(FHorizontalScrollbar, Self.ClientRect.Width, FPageWidth);
-      FX := (ClientRect.Width - FPageWidth) div 2;
+      FViewportX := (ClientRect.Width - FPageWidth) div 2;
       if FVerticalScrollbar.Visible then
-        FX := FX - FVerticalScrollbar.Width;
-      FX := max(0, FX);
-      FY := 0;
+        FViewportX := FViewportX - FVerticalScrollbar.Width;
+      FViewportX := max(0, FViewportX);
+      FViewportY := 0;
     end
     else
     begin
-      FPageWidth := round(curPage.Width * (ZoomPercentage / 100));
-      FPageHeight := round(curPage.Height * (ZoomPercentage / 100));
+      FPageWidth := max(1, round(curPage.Width * (ZoomPercentage / 100)));
+      FPageHeight := max(1, round(curPage.Height * (ZoomPercentage / 100)));
       FHorizontalScrollbar.Visible := FPageWidth > Self.ClientWidth;
       FVerticalScrollbar.Visible := FPageHeight > Self.ClientRect.Height;
       AdjustScrollbar(FVerticalScrollbar, Self.ClientRect.Height, FPageHeight);
       AdjustScrollbar(FHorizontalScrollbar, Self.ClientRect.Width, FPageWidth);
-      FX := (ClientRect.Width - FPageWidth) div 2;
+      FViewportX := (ClientRect.Width - FPageWidth) div 2;
       if FVerticalScrollbar.Visible then
-        FX := FX - (FVerticalScrollbar.Width div 2);
-      FX := max(0, FX);
-      FY := (ClientRect.Height - FPageHeight) div 2;
+        FViewportX := FViewportX - (FVerticalScrollbar.Width div 2);
+      FViewportX := max(0, FViewportX);
+      FViewportY := (ClientRect.Height - FPageHeight) div 2;
       if FHorizontalScrollbar.Visible then
-        FY := FY - (FHorizontalScrollbar.Height div 2);
-      FY := max(0, FY);
+        FViewportY := FViewportY - (FHorizontalScrollbar.Height div 2);
+      FViewportY := max(0, FViewportY);
     end;
   end;
 end;
@@ -285,6 +305,80 @@ begin
     FVerticalScrollbar.Position := min(FVerticalScrollbar.Position + (direction * FVerticalScrollbar.PageSize), FVerticalScrollbar.Max - FVerticalScrollbar.PageSize);
 end;
 
+procedure TLCLPdfControl.CMMouseleave(var Message: TlMessage);
+begin
+  if (Cursor = crIBeam) or (Cursor = crHandPoint) then
+  begin
+    //if AllowUserTextSelection or Assigned(FOnWebLinkClick) or Assigned(FOnAnnotationLinkClick) or (LinkOptions <> []) then
+    Cursor := crDefault;
+  end;
+  inherited;
+
+end;
+
+procedure TLCLPdfControl.WMKeyDown(var Message: TLMKeyDown);
+var
+  curPage : TPdfPage;
+begin
+  if AllowFormEvents then
+  begin
+    curPage := FDocument.Pages[FPageIndex];
+    curPage.FormEventKeyDown(Message.CharCode, Message.KeyData);
+  end;
+  inherited;
+end;
+
+procedure TLCLPdfControl.WMKeyUp(var Message: TLMKeyUp);
+var
+  curPage : TPdfPage;
+begin
+  if AllowFormEvents  then
+  begin
+    curPage := FDocument.Pages[FPageIndex];
+    if curPage.FormEventKeyUp(Message.CharCode, Message.KeyData) then
+      Exit;
+  end;
+  inherited;
+end;
+
+procedure TLCLPdfControl.WMChar(var Message: TLMChar);
+var
+  curPage : TPdfPage;
+begin
+  if AllowFormEvents then
+  begin
+    curPage := FDocument.Pages[FPageIndex];
+    if curPage.FormEventKeyPress(Message.CharCode, Message.KeyData) then
+      Exit;
+  end;
+  inherited;
+end;
+
+procedure TLCLPdfControl.WMKillFocus(var Message: TLMKillFocus);
+var
+  curPage : TPdfPage;
+begin
+  if AllowFormEvents then
+  begin
+    curPage := FDocument.Pages[FPageIndex];
+    curPage.FormEventKillFocus;
+  end;
+end;
+
+function TLCLPdfControl.PageX: integer;
+begin
+  Result := FViewportX;
+  if FHorizontalScrollbar.Visible then
+    Result := Result - FHorizontalScrollbar.Position;
+end;
+
+function TLCLPdfControl.PageY: integer;
+begin
+  Result := FViewportY;
+  if FVerticalScrollbar.Visible then
+    Result := Result - FVerticalScrollbar.Position;
+end;
+
 procedure TLCLPdfControl.Paint;
 var
   curPage : TPdfPage;
@@ -297,17 +391,13 @@ begin
   if FPageIndex < FDocument.PageCount then
   begin
     curPage := FDocument.Pages[FPageIndex];
-    x := FX;
-    if FHorizontalScrollbar.Visible then
-      x := x - FHorizontalScrollbar.Position;
-    y := FY;
-    if FVerticalScrollbar.Visible then
-      y := y - FVerticalScrollbar.Position;
+    x := PageX;
+    y := PageY;
     curPage.DrawToCanvas(Self.Canvas, x, y, FPageWidth, FPageHeight);
 
     for i := 0 to FHighlightTextRects.Count - 1 do
     begin
-      rect := curPage.PageToDevice(FX, FY, FPageWidth, FPageHeight, FHighlightTextRects.Get(i).R);
+      rect := curPage.PageToDevice(x, y, FPageWidth, FPageHeight, FHighlightTextRects.Get(i).R);
       if FHorizontalScrollbar.Visible then
       begin
         rect.Left := rect.Left - FHorizontalScrollbar.Position;
@@ -326,8 +416,40 @@ begin
 end;
 
 procedure TLCLPdfControl.MouseMove(Shift: TShiftState; X, Y: Integer);
+var
+  curPage : TPdfPage;
+  PagePt : TPdfPoint;
 begin
   inherited MouseMove(Shift, X, Y);
+  if AllowFormEvents then
+  begin
+    if (X < FViewportX) or (X > FViewPortX + FPageWidth) or (Y < FViewportY) or (Y > FViewportY + FPageHeight) then
+      exit;
+
+    curPage := FDocument.Pages[FPageIndex];
+    PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
+    curPage.FormEventMouseMove(Shift, PagePt.X, PagePt.Y);
+    (*
+    if curPage.FormEventMouseMove(Shift, PagePt.X, PagePt.Y) then
+    begin
+      case curPage.HasFormFieldAtPoint(PagePt.X, PagePt.Y) of
+        fftUnknown:
+          // Could be a annotation link with a URL
+          exit;
+        fftTextField:
+          Self.Cursor := crIBeam;
+        fftComboBox,
+        fftSignature:
+          Self.Cursor := crHandPoint;
+      else
+        Self.Cursor := crDefault;
+      end;
+    end
+    else
+      Self.Cursor := crDefault;
+      *)
+  end;
+
 end;
 
 procedure TLCLPdfControl.MouseDown(Button: TMouseButton; Shift: TShiftState; X: Integer; Y: Integer);
@@ -343,7 +465,7 @@ begin
 
     if AllowFormEvents then
     begin
-      PagePt := curPage.DeviceToPage(FX, FY, FPageWidth, FPageHeight, X, Y);
+      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
       if Button = mbLeft then
       begin
         if curPage.FormEventLButtonDown(Shift, PagePt.X, PagePt.Y) then
@@ -390,6 +512,33 @@ begin
 
 end;
 
+procedure TLCLPdfControl.MouseUp(Button: TMouseButton; Shift: TShiftState; X: Integer; Y: Integer);
+var
+  curPage : TPdfPage;
+  PagePt : TPdfPoint;
+begin
+  inherited MouseUp(Button, Shift, X, Y);
+  if (FPageIndex < FDocument.PageCount) then
+  begin
+    curPage := FDocument.Pages[FPageIndex];
+    if AllowFormEvents  then
+    begin
+      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
+      if (Button = mbLeft) and curPage.FormEventLButtonUp(Shift, PagePt.X, PagePt.Y) then
+      begin
+        //if FMousePressed and (Button = mbLeft) then
+        //begin
+        //  FMousePressed := False;
+        //  StopScrollTimer;
+        //end;
+        Exit;
+      end;
+      if (Button = mbRight) and curPage.FormEventRButtonUp(Shift, PagePt.X, PagePt.Y) then
+        Exit;
+    end;
+  end;
+end;
+
 constructor TLCLPdfControl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -399,13 +548,15 @@ begin
   FHighlightTextRects := TLCLPdfControlPdfRects.Create;
   FDocument := TPdfDocument.Create;
   FDocument.OnFormInvalidate := @FormInvalidate;
+  FDocument.OnFormOutputSelectedRect := @FormOutputSelectedRect;
+  FDocument.OnFormGetCurrentPage := @FormGetCurrentPage;
   Color:= clGray;
   Width := 130;
   Height := 180;
   FPageWidth := 0;
   FPageHeight := 0;
-  FX := 0;
-  FY := 0;
+  FViewportX := 0;
+  FViewportY := 0;
   FPageIndex := 0;
   FHorizontalScrollbar := TScrollbar.Create(Self);
   FHorizontalScrollbar.Kind:= sbHorizontal;
