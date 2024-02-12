@@ -163,7 +163,9 @@ end;
 
 procedure TLCLPdfControl.FormOutputSelectedRect(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
 begin
+  {$IFDEF LINUX}
   WriteLn('ok');
+  {$ENDIF}
 end;
 
 procedure TLCLPdfControl.FormGetCurrentPage(Document: TPdfDocument; var Page: TPdfPage);
