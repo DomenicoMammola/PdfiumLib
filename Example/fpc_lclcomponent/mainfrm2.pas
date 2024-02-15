@@ -1,7 +1,5 @@
 unit mainfrm2;
 
-{$DEFINE LCL_CTRL}
-
 interface
 
 uses
@@ -18,6 +16,7 @@ type
     btnNext: TButton;
     btnHighlight: TButton;
     btnScale: TButton;
+    OpenButton: TButton;
     chkLCDOptimize: TCheckBox;
     chkSmoothScroll: TCheckBox;
     Edit1: TEdit;
@@ -42,6 +41,7 @@ type
     procedure ListViewAttachmentsDblClick(Sender: TObject);
     procedure chkChangePageOnMouseScrollingClick(Sender: TObject);
     procedure btnAddAnnotationClick(Sender: TObject);
+    procedure OpenButtonClick(Sender: TObject);
   private
     { Private-Deklarationen }
     FCtrl: TLCLPdfControl;
@@ -68,7 +68,7 @@ begin
   {$IFDEF LINUX}
   PDFiumDllFileName := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'libpdfium.so';
   {$ELSE}
-  PDFiumDllFileName := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'pdfium.dll';
+  PDFiumDllFileName := UnicodeString(IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'pdfium.dll');
   {$ENDIF LINUX}
 
   {$IFDEF CPUX64}
@@ -79,16 +79,15 @@ begin
   {$ENDIF CPUX64}
 
   FCtrl := TLCLPdfControl.Create(Self);
-  FCtrl.Align := alClient;
   FCtrl.Parent := Self;
-  FCtrl.SendToBack; // put the control behind the buttons
-  FCtrl.Color := clGray;
+  FCtrl.Align := alClient;
+  FCtrl.Color := clRed;
+  FCtrl.AllowFormEvents:= true;
   {$IFDEF UNIX}
   {$IFNDEF LCL_CTRL}
   FCtrl.BufferedPageDraw := false;
   {$ENDIF}
   {$ENDIF}
-  //FCtrl.Color := clWhite;
   //FCtrl.PageBorderColor := clBlack;
   //FCtrl.PageShadowColor := clDkGray;
   FCtrl.ScaleMode := smFitAuto;
@@ -99,7 +98,7 @@ begin
   //FCtrl.OnPrintDocument := @PrintDocument;
 
   edtZoom.Value := FCtrl.ZoomPercentage;
-
+  (*
   if FileExists(ParamStr(1)) then
     FCtrl.LoadFromFile(ParamStr(1))
   else if OpenDialog1.Execute then
@@ -109,10 +108,13 @@ begin
     Application.ShowMainForm := False;
     Application.Terminate;
   end;
+  *)
 
   Caption := GetEnumName(TypeInfo(TPdfControlScaleMode), Ord(FCtrl.ScaleMode));
   ListAttachments;
 end;
+
+
 
 procedure TfrmMain.ListAttachments;
 var
@@ -162,7 +164,7 @@ begin
   Caption := GetEnumName(TypeInfo(TPdfControlScaleMode), Ord(FCtrl.ScaleMode));
 end;
 
-procedure TfrmMain.WebLinkClick(Sender: TObject; Url: string);
+procedure TfrmMain.WebLinkClick(Sender: TObject; Url: String);
 begin
   ShowMessage(Url);
 end;
@@ -258,15 +260,19 @@ end;
 
 procedure TfrmMain.btnAddAnnotationClick(Sender: TObject);
 begin
-  {$IFNDEF LCL_CTRL}
-  // Add a new annotation and make it persietent so that is can be shown and saved to a file.
-  FCtrl.CurrentPage.Annotations.NewTextAnnotation('My Annotation Text', TPdfRect.New(200, 750, 250, 700));
-  FCtrl.CurrentPage.ApplyChanges;
-//  FCtrl.Document.SaveToFile(ExtractFileDir(ParamStr(0)) + PathDelim + 'Test_annot.pdf');
+//  // Add a new annotation and make it persietent so that is can be shown and saved to a file.
+//  FCtrl.CurrentPage.Annotations.NewTextAnnotation('My Annotation Text', TPdfRect.New(200, 750, 250, 700));
+//  FCtrl.CurrentPage.ApplyChanges;
+////  FCtrl.Document.SaveToFile(ExtractFileDir(ParamStr(0)) + PathDelim + 'Test_annot.pdf');
+//
+//  // Invalid the buffered image of the page
+//  FCtrl.InvalidatePage;
+end;
 
-  // Invalid the buffered image of the page
-  FCtrl.InvalidatePage;
-  {$ENDIF}
+procedure TfrmMain.OpenButtonClick(Sender: TObject);
+begin
+  if OpenDialog1.Execute then
+    FCtrl.LoadFromFile(OpenDialog1.FileName);
 end;
 
 end.

@@ -3,7 +3,7 @@ unit PdfiumLclCtrl;
 interface
 
 uses
-  Classes, Controls, StdCtrls, Contnrs,
+  Classes, Controls, StdCtrls, Contnrs, ExtCtrls,
   LMessages,
   PdfiumCore;
 
@@ -67,6 +67,8 @@ type
     procedure WMKeyUp(var Message: TLMKeyUp); message LM_KEYUP;
     procedure WMChar(var Message: TLMChar); message LM_CHAR;
     procedure WMKillFocus(var Message: TLMKillFocus); message LM_KILLFOCUS;
+//    procedure WMSetFocus(var Message: TLMSetFocus); message LM_SETFOCUS;
+//    procedure UpdateFocus(AFocused: Boolean);
     function PageX : integer;
     function PageY : integer;
   protected
@@ -207,6 +209,9 @@ var
   curPage : TPdfPage;
   relPage, relViewport : Single;
 begin
+  if not FDocument.Active then
+    exit;
+
   if FPageIndex < FDocument.PageCount then
   begin
     curPage := FDocument.Pages[FPageIndex];
@@ -365,7 +370,29 @@ begin
     curPage := FDocument.Pages[FPageIndex];
     curPage.FormEventKillFocus;
   end;
+  //UpdateFocus(false);
 end;
+
+(*
+procedure TLCLPdfControl.WMSetFocus(var Message: TLMSetFocus);
+begin
+  UpdateFocus(true);
+end;
+*)
+(*
+procedure TLCLPdfControl.UpdateFocus(AFocused: Boolean);
+var
+  lForm: TCustomForm;
+begin
+  lForm := GetParentForm(Self);
+  if lForm = nil then exit;
+
+  if AFocused then
+    ActiveDefaultControlChanged(lForm.ActiveControl)
+  else
+    ActiveDefaultControlChanged(nil);
+end;
+*)
 
 function TLCLPdfControl.PageX: integer;
 begin
@@ -388,7 +415,7 @@ var
   rect : TRect;
 begin
   inherited Paint;
-  Canvas.Brush.Color:= clRed;
+  Canvas.Brush.Color:= Self.Color;
   Canvas.FillRect(ClientRect);
   if FPageIndex < FDocument.PageCount then
   begin
@@ -467,6 +494,9 @@ begin
 
     if AllowFormEvents then
     begin
+      if not Focused and not(csNoFocus in ControlStyle) then
+        SetFocus;
+
       PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
       if Button = mbLeft then
       begin
@@ -543,15 +573,16 @@ end;
 
 constructor TLCLPdfControl.Create(AOwner: TComponent);
 begin
-  inherited Create(AOwner);
-  FScaleMode := smFitAuto;
-  FZoomPercentage := 100;
-  FAllowFormEvents := true;
-  FHighlightTextRects := TLCLPdfControlPdfRects.Create;
+  inherited;
   FDocument := TPdfDocument.Create;
   FDocument.OnFormInvalidate := @FormInvalidate;
   FDocument.OnFormOutputSelectedRect := @FormOutputSelectedRect;
   FDocument.OnFormGetCurrentPage := @FormGetCurrentPage;
+
+  FScaleMode := smFitAuto;
+  FZoomPercentage := 100;
+  FAllowFormEvents := true;
+  FHighlightTextRects := TLCLPdfControlPdfRects.Create;
   Color:= clGray;
   Width := 130;
   Height := 180;
@@ -586,6 +617,8 @@ begin
   FDocument.LoadFromFile(UnicodeString(FileName), Password, LoadOption);
   FHighlightTextRects.Clear;
   AdjustGeometry;
+  Invalidate;
+  SetFocus;
 end;
 
 function TLCLPdfControl.GotoNextPage: Boolean;
