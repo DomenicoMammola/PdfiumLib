@@ -1608,7 +1608,7 @@ begin
           finally
             FreeAndNil(FFileStream);
           end;
-        end;
+        end
       dloOnDemand:
         LoadFromActiveStream(FFileStream, Password);
     end;
@@ -2608,7 +2608,8 @@ begin
   Result := FPageLinkHandle <> nil;
 end;
 
-function TPdfPage.BeginFind(const SearchString: string; MatchCase, MatchWholeWord: Boolean; FromEnd: Boolean): Boolean;
+function TPdfPage.BeginFind(const SearchString: string; MatchCase, MatchWholeWord,
+  FromEnd: Boolean): Boolean;
 var
   Flags, StartIndex: Integer;
 begin
