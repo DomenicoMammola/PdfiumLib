@@ -16,6 +16,8 @@ type
     btnNext: TButton;
     btnHighlight: TButton;
     btnScale: TButton;
+    BtnRotateLeft: TButton;
+    BtnRotateRight: TButton;
     OpenButton: TButton;
     chkLCDOptimize: TCheckBox;
     chkSmoothScroll: TCheckBox;
@@ -29,6 +31,8 @@ type
     chkChangePageOnMouseScrolling: TCheckBox;
     btnAddAnnotation: TButton;
     pnlButtons: TPanel;
+    procedure BtnRotateLeftClick(Sender: TObject);
+    procedure BtnRotateRightClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnPrevClick(Sender: TObject);
     procedure btnNextClick(Sender: TObject);
@@ -90,30 +94,31 @@ begin
   FCtrl.BufferedPageDraw := false;
   {$ENDIF}
   {$ENDIF}
-  //FCtrl.PageBorderColor := clBlack;
-  //FCtrl.PageShadowColor := clDkGray;
   FCtrl.ScaleMode := smFitAuto;
-  //FCtrl.PageColor := RGB(255, 255, 200);
-  //FCtrl.OnWebLinkClick := @WebLinkClick; // disabled due to loTreatWebLinkAsUriAnnotationLink + loAutoOpenURI
-  //FCtrl.OnAnnotationLinkClick := @AnnotationLinkClick;
-  //FCtrl.LinkOptions := FCtrl.LinkOptions - [loAutoOpenURI] {+ cPdfControlAllAutoLinkOptions};
-  //FCtrl.OnPrintDocument := @PrintDocument;
 
   edtZoom.Value := FCtrl.ZoomPercentage;
-  (*
-  if FileExists(ParamStr(1)) then
-    FCtrl.LoadFromFile(ParamStr(1))
-  else if OpenDialog1.Execute then
-    FCtrl.LoadFromFile(OpenDialog1.FileName)
-  else
-  begin
-    Application.ShowMainForm := False;
-    Application.Terminate;
-  end;
-  *)
 
   Caption := GetEnumName(TypeInfo(TPdfControlScaleMode), Ord(FCtrl.ScaleMode));
-  ListAttachments;
+end;
+
+procedure TfrmMain.BtnRotateLeftClick(Sender: TObject);
+begin
+  case FCtrl.Rotation of
+    prNormal: FCtrl.Rotation:= pr90CounterClockwide;
+    pr90Clockwise: FCtrl.Rotation:= prNormal;
+    pr180: FCtrl.Rotation:= pr90Clockwise;
+    pr90CounterClockwide: FCtrl.Rotation:= pr180;
+  end;
+end;
+
+procedure TfrmMain.BtnRotateRightClick(Sender: TObject);
+begin
+  case FCtrl.Rotation of
+    prNormal: FCtrl.Rotation:= pr90Clockwise;
+    pr90Clockwise: FCtrl.Rotation:= pr180;
+    pr180: FCtrl.Rotation:= pr90CounterClockwide;
+    pr90CounterClockwide: FCtrl.Rotation:= prNormal;
+  end;
 end;
 
 
@@ -279,7 +284,10 @@ end;
 procedure TfrmMain.OpenButtonClick(Sender: TObject);
 begin
   if OpenDialog1.Execute then
+  begin
     FCtrl.LoadFromFile(OpenDialog1.FileName);
+    ListAttachments;
+  end;
 end;
 
 end.

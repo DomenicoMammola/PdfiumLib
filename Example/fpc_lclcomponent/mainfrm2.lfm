@@ -2,10 +2,10 @@ object frmMain: TfrmMain
   Left = 290
   Height = 647
   Top = 179
-  Width = 1031
+  Width = 1014
   Caption = 'PDFium Test'
   ClientHeight = 647
-  ClientWidth = 1031
+  ClientWidth = 1014
   Color = clBtnFace
   Font.Color = clWindowText
   Font.Height = -11
@@ -16,7 +16,7 @@ object frmMain: TfrmMain
     Left = 0
     Height = 47
     Top = 600
-    Width = 1031
+    Width = 1014
     Align = alBottom
     Columns = <>
     TabOrder = 0
@@ -25,13 +25,13 @@ object frmMain: TfrmMain
   end
   object pnlButtons: TPanel
     Left = 0
-    Height = 25
+    Height = 72
     Top = 0
-    Width = 1031
+    Width = 1014
     Align = alTop
     BevelOuter = bvNone
-    ClientHeight = 25
-    ClientWidth = 1031
+    ClientHeight = 72
+    ClientWidth = 1014
     ParentBackground = False
     TabOrder = 1
     object btnAddAnnotation: TButton
@@ -136,12 +136,30 @@ object frmMain: TfrmMain
     end
     object OpenButton: TButton
       Left = 848
-      Height = 19
-      Top = 2
+      Height = 22
+      Top = 0
       Width = 160
       Caption = 'Open pdf...'
       TabOrder = 11
       OnClick = OpenButtonClick
+    end
+    object BtnRotateLeft: TButton
+      Left = 240
+      Height = 25
+      Top = 32
+      Width = 75
+      Caption = 'Rotate left'
+      TabOrder = 12
+      OnClick = BtnRotateLeftClick
+    end
+    object BtnRotateRight: TButton
+      Left = 331
+      Height = 25
+      Top = 32
+      Width = 75
+      Caption = 'Rotate right'
+      TabOrder = 13
+      OnClick = BtnRotateRightClick
     end
   end
   object PrintDialog1: TPrintDialog

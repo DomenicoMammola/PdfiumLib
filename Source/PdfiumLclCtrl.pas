@@ -3,9 +3,13 @@ unit PdfiumLclCtrl;
 interface
 
 uses
-  Classes, Controls, StdCtrls, Contnrs, ExtCtrls,
+  Classes, Controls, StdCtrls, Contnrs, ExtCtrls, Graphics,
   LMessages,
   PdfiumCore;
+
+const
+  cPdfControlDefaultDrawOptions = [proAnnotations];
+  cHighLightTextColor = clYellow;
 
 type
   TPdfControlScaleMode = (
@@ -49,11 +53,13 @@ type
     FHorizontalScrollbar : TScrollbar;
     FVerticalScrollbar : TScrollBar;
     FHighlightTextRects : TLCLPdfControlPdfRects;
-    FWebLinkInfo: TPdfPageWebLinksInfo;
 
     FScaleMode : TPdfControlScaleMode;
     FZoomPercentage : Integer;
+    FRotation: TPdfPageRotation;
     FAllowFormEvents : Boolean;
+    FDrawOptions : TPdfPageRenderOptions;
+    FHighLightTextColor : TColor;
 
     FOnWebLinkClick : TLCLPdfControlWebLinkClickEvent;
 
@@ -61,12 +67,16 @@ type
     procedure FormOutputSelectedRect(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
     procedure FormGetCurrentPage(Document: TPdfDocument; var Page: TPdfPage);
 
+    procedure SetDrawOptions(AValue: TPdfPageRenderOptions);
+    procedure SetHighLightTextColor(AValue: TColor);
+    procedure SetRotation(AValue: TPdfPageRotation);
     procedure SetScaleMode(AValue: TPdfControlScaleMode);
     procedure SetZoomPercentage(AValue: Integer);
-    procedure AnalyzeWebLinksOfCurrentPage;
+
     procedure AdjustGeometry;
     procedure DocumentLoaded;
     function PageIndexValid : boolean;
+    procedure SetSelection(Active: Boolean; StartIndex, StopIndex: Integer);
     procedure OnChangeHorizontalScrollbar(Sender: TObject);
     procedure OnChangeVerticalScrollbar(Sender: TObject);
     procedure CMMouseWheel(var Message: TLMMouseEvent); message LM_MOUSEWHEEL;
@@ -100,13 +110,16 @@ type
     property AllowFormEvents: Boolean read FAllowFormEvents write FAllowFormEvents default True;
 
     property OnWebLinkClick: TLCLPdfControlWebLinkClickEvent read FOnWebLinkClick write FOnWebLinkClick;
+    property DrawOptions: TPdfPageRenderOptions read FDrawOptions write SetDrawOptions default cPdfControlDefaultDrawOptions;
+    property HighLightTextColor : TColor read FHighLightTextColor write SetHighLightTextColor default cHighLightTextColor;
+    property Rotation: TPdfPageRotation read FRotation write SetRotation default prNormal;
   end;
 
 
 implementation
 
 uses
-  Graphics, Math, Forms, LCLIntf, LCLType, SysUtils;
+  Math, Forms, LCLIntf, LCLType, SysUtils;
 
 // https://forum.lazarus.freepascal.org/index.php?topic=32648.0
 procedure DrawTransparentRectangle(Canvas: TCanvas; Rect: TRect; Color: TColor; Transparency: Integer);
@@ -186,6 +199,28 @@ begin
     Page := FDocument.Pages[FPageIndex];
 end;
 
+procedure TLCLPdfControl.SetDrawOptions(AValue: TPdfPageRenderOptions);
+begin
+  if FDrawOptions = AValue then Exit;
+  FDrawOptions := AValue;
+  Invalidate;
+end;
+
+procedure TLCLPdfControl.SetHighLightTextColor(AValue: TColor);
+begin
+  if FHighLightTextColor = AValue then Exit;
+  FHighLightTextColor := AValue;
+  Invalidate;
+end;
+
+procedure TLCLPdfControl.SetRotation(AValue: TPdfPageRotation);
+begin
+  if FRotation=AValue then Exit;
+  FRotation:=AValue;
+  AdjustGeometry;
+  Invalidate;
+end;
+
 procedure TLCLPdfControl.SetScaleMode(AValue: TPdfControlScaleMode);
 begin
   if FScaleMode=AValue then Exit;
@@ -203,13 +238,6 @@ begin
   FZoomPercentage:=AValue;
   AdjustGeometry;
   Invalidate;
-end;
-
-procedure TLCLPdfControl.AnalyzeWebLinksOfCurrentPage;
-begin
-  FreeAndNil(FWebLinkInfo);
-  if PageIndexValid then
-    FWebLinkInfo := TPdfPageWebLinksInfo.Create(FDocument.Pages[FPageIndex]);
 end;
 
 procedure TLCLPdfControl.AdjustGeometry;
@@ -307,13 +335,11 @@ procedure TLCLPdfControl.DocumentLoaded;
 begin
   FHighlightTextRects.Clear;
   FPageIndex:= 0;
-  FreeAndNil(FWebLinkInfo);
   if FDocument.Active then
   begin
     AdjustGeometry;
     Invalidate;
     SetFocus;
-    AnalyzeWebLinksOfCurrentPage;
   end
   else
     Invalidate;
@@ -322,6 +348,11 @@ end;
 function TLCLPdfControl.PageIndexValid: boolean;
 begin
   Result := (FDocument.Active) and (FPageIndex < FDocument.PageCount);
+end;
+
+procedure TLCLPdfControl.SetSelection(Active: Boolean; StartIndex, StopIndex: Integer);
+begin
+
 end;
 
 procedure TLCLPdfControl.OnChangeHorizontalScrollbar(Sender: TObject);
@@ -353,13 +384,9 @@ end;
 
 procedure TLCLPdfControl.CMMouseleave(var Message: TlMessage);
 begin
-  if (Cursor = crIBeam) or (Cursor = crHandPoint) then
-  begin
-    //if AllowUserTextSelection or Assigned(FOnWebLinkClick) or Assigned(FOnAnnotationLinkClick) or (LinkOptions <> []) then
+  if (*(Cursor = crIBeam) or*) (Cursor = crHandPoint) then
     Cursor := crDefault;
-  end;
   inherited;
-
 end;
 
 procedure TLCLPdfControl.WMKeyDown(var Message: TLMKeyDown);
@@ -461,7 +488,7 @@ begin
     curPage := FDocument.Pages[FPageIndex];
     x := PageX;
     y := PageY;
-    curPage.DrawToCanvas(Self.Canvas, x, y, FPageWidth, FPageHeight);
+    curPage.DrawToCanvas(Self.Canvas, x, y, FPageWidth, FPageHeight, FRotation, FDrawOptions);
 
     for i := 0 to FHighlightTextRects.Count - 1 do
     begin
@@ -476,9 +503,8 @@ begin
         rect.Top := rect.Top - FVerticalScrollbar.Position;
         rect.Bottom := rect.Bottom - FVerticalScrollbar.Position;
       end;
-      Canvas.Brush.Color:= clYellow;
+      Canvas.Brush.Color:= FHighlightTextColor;
       DrawTransparentRectangle(Canvas, rect, clYellow, 50);
-//      Canvas.FillRect(rect);
     end;
   end;
 end;
@@ -487,20 +513,31 @@ procedure TLCLPdfControl.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
   curPage : TPdfPage;
   PagePt : TPdfPoint;
+  url : UnicodeString;
 begin
   inherited MouseMove(Shift, X, Y);
 
-  if not FDocument.Active then
-    exit;
-
-  if AllowFormEvents and PageIndexValid then
+  if PageIndexValid  then
   begin
     if (X < FViewportX) or (X > FViewPortX + FPageWidth) or (Y < FViewportY) or (Y > FViewportY + FPageHeight) then
       exit;
 
     curPage := FDocument.Pages[FPageIndex];
     PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
-    curPage.FormEventMouseMove(Shift, PagePt.X, PagePt.Y);
+
+    Cursor := crDefault;
+
+    if AllowFormEvents then
+    begin
+      if curPage.FormEventMouseMove(Shift, PagePt.X, PagePt.Y) then
+      begin
+        if curPage.IsUriLinkAtPoint(PagePt.X, PagePt.Y, url) then
+          Cursor:= crHandPoint;
+      end;
+    end;
+
+
+
     (*
     if curPage.FormEventMouseMove(Shift, PagePt.X, PagePt.Y) then
     begin
@@ -529,6 +566,7 @@ var
   curPage : TPdfPage;
   PagePt : TPdfPoint;
   Url : UnicodeString;
+  CharIndex: Integer;
 begin
   inherited MouseDown(Button, Shift, X, Y);
 
@@ -560,10 +598,15 @@ begin
     begin
       PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
       Url := '';
-      if FWebLinkInfo.IsWebLinkAt(PagePt.X, PagePt.Y, Url) then
+      if curPage.IsUriLinkAtPoint(PagePt.X, PagePt.Y, Url) then
       begin
         if Assigned(FOnWebLinkClick) then
-          FOnWebLinkClick(Self, Url);
+          FOnWebLinkClick(Self, String(Url));
+      end
+      else
+      begin
+        CharIndex := curPage.GetCharIndexAt(PagePt.X, PagePt.Y, MAXWORD, MAXWORD);
+        SetSelection(False, CharIndex, CharIndex);
       end;
     end;
   end;
@@ -597,8 +640,10 @@ begin
   FDocument.OnFormInvalidate := @FormInvalidate;
   FDocument.OnFormOutputSelectedRect := @FormOutputSelectedRect;
   FDocument.OnFormGetCurrentPage := @FormGetCurrentPage;
-  FWebLinkInfo := nil;
   FOnWebLinkClick := nil;
+  FDrawOptions := cPdfControlDefaultDrawOptions;
+  FHighlightTextColor := cHighLightTextColor;
+  FRotation := prNormal;
 
   FScaleMode := smFitAuto;
   FZoomPercentage := 100;
@@ -630,7 +675,6 @@ destructor TLCLPdfControl.Destroy;
 begin
   FDocument.Free;
   FHighlightTextRects.Free;
-  FreeAndNil(FWebLinkInfo);
   inherited Destroy;
 end;
 
@@ -650,7 +694,6 @@ begin
   begin
     FHighlightTextRects.Clear;
     inc(FPageIndex);
-    AnalyzeWebLinksOfCurrentPage;
     AdjustGeometry;
     Invalidate;
     Result := true;
@@ -664,7 +707,6 @@ begin
   begin
     FHighlightTextRects.Clear;
     dec(FPageIndex);
-    AnalyzeWebLinksOfCurrentPage;
     AdjustGeometry;
     Invalidate;
     Result := true;
