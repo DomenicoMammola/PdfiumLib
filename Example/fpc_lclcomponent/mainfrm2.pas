@@ -49,6 +49,7 @@ type
     procedure AnnotationLinkClick(Sender: TObject; LinkInfo: TPdfLinkInfo; var Handled: Boolean);
     procedure PrintDocument(Sender: TObject);
     procedure ListAttachments;
+    procedure OnWebLinkClick(Sender: TObject; Url: string);
   public
     { Public-Deklarationen }
   end;
@@ -83,6 +84,7 @@ begin
   FCtrl.Align := alClient;
   FCtrl.Color := clRed;
   FCtrl.AllowFormEvents:= true;
+  FCtrl.OnWebLinkClick:= @OnWebLinkClick;
   {$IFDEF UNIX}
   {$IFNDEF LCL_CTRL}
   FCtrl.BufferedPageDraw := false;
@@ -138,6 +140,11 @@ begin
       ListViewAttachments.Items.EndUpdate;
     end;
   end;
+end;
+
+procedure TfrmMain.OnWebLinkClick(Sender: TObject; Url: string);
+begin
+  ShowMessage('Clicked on ' + Url);
 end;
 
 procedure TfrmMain.btnPrevClick(Sender: TObject);

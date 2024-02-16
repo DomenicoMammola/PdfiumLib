@@ -35,6 +35,8 @@ type
     function Add: TLCLPdfControlPdfRectShell;
   end;
 
+  TLCLPdfControlWebLinkClickEvent = procedure(Sender: TObject; Url: string) of object;
+
   { TLCLPdfControl }
 
   TLCLPdfControl = class(TCustomControl)
@@ -47,10 +49,13 @@ type
     FHorizontalScrollbar : TScrollbar;
     FVerticalScrollbar : TScrollBar;
     FHighlightTextRects : TLCLPdfControlPdfRects;
+    FWebLinkInfo: TPdfPageWebLinksInfo;
 
     FScaleMode : TPdfControlScaleMode;
     FZoomPercentage : Integer;
     FAllowFormEvents : Boolean;
+
+    FOnWebLinkClick : TLCLPdfControlWebLinkClickEvent;
 
     procedure FormInvalidate(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
     procedure FormOutputSelectedRect(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
@@ -58,7 +63,10 @@ type
 
     procedure SetScaleMode(AValue: TPdfControlScaleMode);
     procedure SetZoomPercentage(AValue: Integer);
+    procedure AnalyzeWebLinksOfCurrentPage;
     procedure AdjustGeometry;
+    procedure DocumentLoaded;
+    function PageIndexValid : boolean;
     procedure OnChangeHorizontalScrollbar(Sender: TObject);
     procedure OnChangeVerticalScrollbar(Sender: TObject);
     procedure CMMouseWheel(var Message: TLMMouseEvent); message LM_MOUSEWHEEL;
@@ -90,13 +98,15 @@ type
     property ScaleMode: TPdfControlScaleMode read FScaleMode write SetScaleMode default smFitAuto;
     property ZoomPercentage: Integer read FZoomPercentage write SetZoomPercentage default 100;
     property AllowFormEvents: Boolean read FAllowFormEvents write FAllowFormEvents default True;
+
+    property OnWebLinkClick: TLCLPdfControlWebLinkClickEvent read FOnWebLinkClick write FOnWebLinkClick;
   end;
 
 
 implementation
 
 uses
-  Graphics, Math, Forms, LCLIntf, LCLType;
+  Graphics, Math, Forms, LCLIntf, LCLType, SysUtils;
 
 // https://forum.lazarus.freepascal.org/index.php?topic=32648.0
 procedure DrawTransparentRectangle(Canvas: TCanvas; Rect: TRect; Color: TColor; Transparency: Integer);
@@ -172,7 +182,8 @@ end;
 
 procedure TLCLPdfControl.FormGetCurrentPage(Document: TPdfDocument; var Page: TPdfPage);
 begin
-  Page := FDocument.Pages[FPageIndex];
+  if PageIndexValid then
+    Page := FDocument.Pages[FPageIndex];
 end;
 
 procedure TLCLPdfControl.SetScaleMode(AValue: TPdfControlScaleMode);
@@ -194,6 +205,13 @@ begin
   Invalidate;
 end;
 
+procedure TLCLPdfControl.AnalyzeWebLinksOfCurrentPage;
+begin
+  FreeAndNil(FWebLinkInfo);
+  if PageIndexValid then
+    FWebLinkInfo := TPdfPageWebLinksInfo.Create(FDocument.Pages[FPageIndex]);
+end;
+
 procedure TLCLPdfControl.AdjustGeometry;
   procedure AdjustScrollbar(aScrollbar: TScrollBar; aViewPortSize, aDocumentSize : integer);
   begin
@@ -212,7 +230,7 @@ begin
   if not FDocument.Active then
     exit;
 
-  if FPageIndex < FDocument.PageCount then
+  if PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
 
@@ -285,6 +303,27 @@ begin
   end;
 end;
 
+procedure TLCLPdfControl.DocumentLoaded;
+begin
+  FHighlightTextRects.Clear;
+  FPageIndex:= 0;
+  FreeAndNil(FWebLinkInfo);
+  if FDocument.Active then
+  begin
+    AdjustGeometry;
+    Invalidate;
+    SetFocus;
+    AnalyzeWebLinksOfCurrentPage;
+  end
+  else
+    Invalidate;
+end;
+
+function TLCLPdfControl.PageIndexValid: boolean;
+begin
+  Result := (FDocument.Active) and (FPageIndex < FDocument.PageCount);
+end;
+
 procedure TLCLPdfControl.OnChangeHorizontalScrollbar(Sender: TObject);
 begin
   Invalidate;
@@ -327,7 +366,7 @@ procedure TLCLPdfControl.WMKeyDown(var Message: TLMKeyDown);
 var
   curPage : TPdfPage;
 begin
-  if AllowFormEvents then
+  if AllowFormEvents and PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
     curPage.FormEventKeyDown(Message.CharCode, Message.KeyData);
@@ -339,7 +378,7 @@ procedure TLCLPdfControl.WMKeyUp(var Message: TLMKeyUp);
 var
   curPage : TPdfPage;
 begin
-  if AllowFormEvents  then
+  if AllowFormEvents and PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
     if curPage.FormEventKeyUp(Message.CharCode, Message.KeyData) then
@@ -352,7 +391,7 @@ procedure TLCLPdfControl.WMChar(var Message: TLMChar);
 var
   curPage : TPdfPage;
 begin
-  if AllowFormEvents then
+  if AllowFormEvents and PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
     if curPage.FormEventKeyPress(Message.CharCode, Message.KeyData) then
@@ -365,7 +404,7 @@ procedure TLCLPdfControl.WMKillFocus(var Message: TLMKillFocus);
 var
   curPage : TPdfPage;
 begin
-  if AllowFormEvents then
+  if AllowFormEvents and PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
     curPage.FormEventKillFocus;
@@ -417,7 +456,7 @@ begin
   inherited Paint;
   Canvas.Brush.Color:= Self.Color;
   Canvas.FillRect(ClientRect);
-  if FPageIndex < FDocument.PageCount then
+  if PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
     x := PageX;
@@ -450,7 +489,11 @@ var
   PagePt : TPdfPoint;
 begin
   inherited MouseMove(Shift, X, Y);
-  if AllowFormEvents then
+
+  if not FDocument.Active then
+    exit;
+
+  if AllowFormEvents and PageIndexValid then
   begin
     if (X < FViewportX) or (X > FViewPortX + FPageWidth) or (Y < FViewportY) or (Y > FViewportY + FPageHeight) then
       exit;
@@ -485,10 +528,11 @@ procedure TLCLPdfControl.MouseDown(Button: TMouseButton; Shift: TShiftState; X: 
 var
   curPage : TPdfPage;
   PagePt : TPdfPoint;
+  Url : UnicodeString;
 begin
   inherited MouseDown(Button, Shift, X, Y);
 
-  if (FPageIndex < FDocument.PageCount) then
+  if PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
 
@@ -511,35 +555,17 @@ begin
           Exit;
       end;
     end;
-    (*
-    if AllowUserTextSelection and not FFormFieldFocused then
+
+    if Button = mbLeft then
     begin
-      if Button = mbLeft then
+      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
+      Url := '';
+      if FWebLinkInfo.IsWebLinkAt(PagePt.X, PagePt.Y, Url) then
       begin
-        PagePt := DeviceToPage(X, Y);
-        CharIndex := Page.GetCharIndexAt(PagePt.X, PagePt.Y, MAXWORD, MAXWORD);
-        if FCheckForTrippleClick and (CharIndex >= SelStart) and (CharIndex < SelStart + SelLength) then
-        begin
-          FMousePressed := False;
-          KillTimer(Handle, cTrippleClickTimerId);
-          FCheckForTrippleClick := False;
-          SelectLine(CharIndex);
-        end
-        else if ssDouble in Shift then
-        begin
-          FMousePressed := False;
-          SelectWord(CharIndex);
-          FCheckForTrippleClick := True;
-          SetTimer(Handle, cTrippleClickTimerId, GetDoubleClickTime, nil);
-        end
-        else
-        begin
-          FCheckForTrippleClick := False;
-          SetSelection(False, CharIndex, CharIndex);
-        end;
+        if Assigned(FOnWebLinkClick) then
+          FOnWebLinkClick(Self, Url);
       end;
     end;
-    *)
   end;
 
 end;
@@ -550,21 +576,14 @@ var
   PagePt : TPdfPoint;
 begin
   inherited MouseUp(Button, Shift, X, Y);
-  if (FPageIndex < FDocument.PageCount) then
+  if PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
     if AllowFormEvents  then
     begin
       PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
       if (Button = mbLeft) and curPage.FormEventLButtonUp(Shift, PagePt.X, PagePt.Y) then
-      begin
-        //if FMousePressed and (Button = mbLeft) then
-        //begin
-        //  FMousePressed := False;
-        //  StopScrollTimer;
-        //end;
         Exit;
-      end;
       if (Button = mbRight) and curPage.FormEventRButtonUp(Shift, PagePt.X, PagePt.Y) then
         Exit;
     end;
@@ -578,6 +597,8 @@ begin
   FDocument.OnFormInvalidate := @FormInvalidate;
   FDocument.OnFormOutputSelectedRect := @FormOutputSelectedRect;
   FDocument.OnFormGetCurrentPage := @FormGetCurrentPage;
+  FWebLinkInfo := nil;
+  FOnWebLinkClick := nil;
 
   FScaleMode := smFitAuto;
   FZoomPercentage := 100;
@@ -609,25 +630,27 @@ destructor TLCLPdfControl.Destroy;
 begin
   FDocument.Free;
   FHighlightTextRects.Free;
+  FreeAndNil(FWebLinkInfo);
   inherited Destroy;
 end;
 
 procedure TLCLPdfControl.LoadFromFile(const FileName: String; const Password: String; LoadOption: TPdfDocumentLoadOption);
 begin
-  FDocument.LoadFromFile(UnicodeString(FileName), Password, LoadOption);
-  FHighlightTextRects.Clear;
-  AdjustGeometry;
-  Invalidate;
-  SetFocus;
+  try
+    FDocument.LoadFromFile(UnicodeString(FileName), Password, LoadOption);
+  finally
+    DocumentLoaded;
+  end;
 end;
 
 function TLCLPdfControl.GotoNextPage: Boolean;
 begin
   Result := false;
-  if FPageIndex < FDocument.PageCount - 1 then
+  if PageIndexValid and (FPageIndex < FDocument.PageCount - 1) then
   begin
     FHighlightTextRects.Clear;
     inc(FPageIndex);
+    AnalyzeWebLinksOfCurrentPage;
     AdjustGeometry;
     Invalidate;
     Result := true;
@@ -637,10 +660,11 @@ end;
 function TLCLPdfControl.GotoPrevPage: Boolean;
 begin
   Result := false;
-  if (FPageIndex > 0) then
+  if PageIndexValid and (FPageIndex > 0) then
   begin
     FHighlightTextRects.Clear;
     dec(FPageIndex);
+    AnalyzeWebLinksOfCurrentPage;
     AdjustGeometry;
     Invalidate;
     Result := true;
@@ -656,7 +680,7 @@ begin
   CharCount := 0;
 
   FHighlightTextRects.Clear;
-  if (SearchText <> '') and (FPageIndex < FDocument.PageCount) then
+  if (SearchText <> '') and PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
 
