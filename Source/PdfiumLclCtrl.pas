@@ -270,42 +270,87 @@ begin
       relPage:= curPage.Height / curPage.Width;
       relViewport:= ClientRect.Height / ClientRect.Width;
 
-      if relViewport > relPage then
+      if (FRotation = prNormal) or (FRotation = pr180) then
       begin
-        FPageWidth := ClientRect.Width;
-        FPageHeight := min(ClientRect.Height, round(FPageWidth * curPage.Height / curPage.Width));
-        FViewportX := 0;
-        FViewportY := (ClientHeight - FPageHeight) div 2;
+        if (relViewport > relPage) then
+        begin
+          FPageWidth := ClientRect.Width;
+          FPageHeight := min(ClientRect.Height, round(FPageWidth * curPage.Height / curPage.Width));
+          FViewportX := 0;
+          FViewportY := (ClientHeight - FPageHeight) div 2;
+        end
+        else
+        begin
+          FPageHeight := ClientRect.Height;
+          FPageWidth := min(Self.ClientRect.Width, round(FPageHeight * curPage.Width / curPage.Height));
+          FViewportX := (Self.ClientRect.Width - FPageWidth) div 2;
+          FViewportY := 0;
+        end;
       end
       else
       begin
-        FPageHeight := Self.ClientRect.Height;
-        FPageWidth := min(Self.ClientRect.Width, round(FPageHeight * curPage.Width / curPage.Height));
-        FViewportX := (Self.ClientRect.Width - FPageWidth) div 2;
-        FViewportY := 0;
+        if (relViewport > relPage) then
+        begin
+          FPageWidth := ClientRect.Width;
+          FPageHeight := min(ClientRect.Height, round(FPageWidth * curPage.Width / curPage.Height));
+          FViewportX := 0;
+          FViewportY := (ClientHeight - FPageHeight) div 2;
+        end
+        else
+        begin
+          FPageWidth := ClientRect.Height;
+          FPageHeight := min(Self.ClientRect.Width, round(FPageWidth * curPage.Height / curPage.Width));
+          FViewportX := (Self.ClientRect.Width - FPageHeight) div 2;
+          FViewportY := 0;
+        end;
       end;
     end
     else if FScaleMode = smFitWidth then
     begin
-      FPageWidth := Self.ClientRect.Width;
-      FPageHeight := trunc(curPage.Height * FPageWidth / curPage.Width);
-      FHorizontalScrollbar.Visible := false;
-      FVerticalScrollbar.Visible := FPageHeight > Self.ClientRect.Height;
-      AdjustScrollbar(FVerticalScrollbar, Self.ClientRect.Height, FPageHeight);
-      FViewportX := 0;
-      FViewportY := (ClientRect.Height - FPageHeight) div 2;
+      if (FRotation = prNormal) or (FRotation = pr180) then
+      begin
+        FPageWidth := Self.ClientRect.Width;
+        FPageHeight := trunc(curPage.Height * FPageWidth / curPage.Width);
+        FHorizontalScrollbar.Visible := false;
+        FVerticalScrollbar.Visible := FPageHeight > Self.ClientRect.Height;
+        AdjustScrollbar(FVerticalScrollbar, Self.ClientRect.Height, FPageHeight);
+        FViewportX := 0;
+        FViewportY := (ClientRect.Height - FPageHeight) div 2;
+      end
+      else
+      begin
+        FPageHeight:= Self.ClientRect.Width;
+        FPageWidth := trunc(curPage.Width * FPageHeight / curPage.Height);
+        FHorizontalScrollbar.Visible := false;
+        FVerticalScrollbar.Visible := FPageWidth > Self.ClientRect.Height;
+        AdjustScrollbar(FVerticalScrollbar, Self.ClientRect.Height, FPageWidth);
+        FViewportX := 0;
+        FViewportY := (ClientRect.Height - FPageWidth) div 2;
+      end;
       if FHorizontalScrollbar.Visible then
         FViewportY := FViewportY - FHorizontalScrollbar.Height;
       FViewportY := max(0, FViewportY);
     end
     else if FScaleMode = smFitHeight then
     begin
-      FPageHeight := Self.ClientRect.Height;
-      FPageWidth := trunc(curPage.Width * FPageHeight / curPage.Height);
-      FVerticalScrollbar.Visible := false;
-      FHorizontalScrollbar.Visible := FPageWidth > Self.ClientWidth;
-      AdjustScrollbar(FHorizontalScrollbar, Self.ClientRect.Width, FPageWidth);
-      FViewportX := (ClientRect.Width - FPageWidth) div 2;
+      if (FRotation = prNormal) or (FRotation = pr180) then
+      begin
+        FPageHeight := Self.ClientRect.Height;
+        FPageWidth := trunc(curPage.Width * FPageHeight / curPage.Height);
+        FVerticalScrollbar.Visible := false;
+        FHorizontalScrollbar.Visible := FPageWidth > Self.ClientWidth;
+        AdjustScrollbar(FHorizontalScrollbar, Self.ClientRect.Width, FPageWidth);
+        FViewportX := (ClientRect.Width - FPageWidth) div 2;
+      end
+      else
+      begin
+        FPageWidth := Self.ClientRect.Height;
+        FPageHeight := trunc(curPage.Height * FPageWidth / curPage.Width);
+        FVerticalScrollbar.Visible := false;
+        FHorizontalScrollbar.Visible := FPageHeight > Self.ClientWidth;
+        AdjustScrollbar(FHorizontalScrollbar, Self.ClientRect.Width, FPageHeight);
+        FViewportX := (ClientRect.Width - FPageHeight) div 2;
+      end;
       if FVerticalScrollbar.Visible then
         FViewportX := FViewportX - FVerticalScrollbar.Width;
       FViewportX := max(0, FViewportX);
@@ -315,15 +360,27 @@ begin
     begin
       FPageWidth := max(1, round(curPage.Width * (ZoomPercentage / 100)));
       FPageHeight := max(1, round(curPage.Height * (ZoomPercentage / 100)));
-      FHorizontalScrollbar.Visible := FPageWidth > Self.ClientWidth;
-      FVerticalScrollbar.Visible := FPageHeight > Self.ClientRect.Height;
-      AdjustScrollbar(FVerticalScrollbar, Self.ClientRect.Height, FPageHeight);
-      AdjustScrollbar(FHorizontalScrollbar, Self.ClientRect.Width, FPageWidth);
-      FViewportX := (ClientRect.Width - FPageWidth) div 2;
+      if (FRotation = prNormal) or (FRotation = pr180) then
+      begin
+        FHorizontalScrollbar.Visible := FPageWidth > Self.ClientWidth;
+        FVerticalScrollbar.Visible := FPageHeight > Self.ClientRect.Height;
+        AdjustScrollbar(FVerticalScrollbar, Self.ClientRect.Height, FPageHeight);
+        AdjustScrollbar(FHorizontalScrollbar, Self.ClientRect.Width, FPageWidth);
+        FViewportX := (ClientRect.Width - FPageWidth) div 2;
+        FViewportY := (ClientRect.Height - FPageHeight) div 2;
+      end
+      else
+      begin
+        FHorizontalScrollbar.Visible := FPageHeight > Self.ClientWidth;
+        FVerticalScrollbar.Visible := FPageWidth > Self.ClientRect.Height;
+        AdjustScrollbar(FVerticalScrollbar, Self.ClientRect.Height, FPageWidth);
+        AdjustScrollbar(FHorizontalScrollbar, Self.ClientRect.Width, FPageHeight);
+        FViewportX := (ClientRect.Width - FPageHeight) div 2;
+        FViewportY := (ClientRect.Height - FPageWidth) div 2;
+      end;
       if FVerticalScrollbar.Visible then
         FViewportX := FViewportX - (FVerticalScrollbar.Width div 2);
       FViewportX := max(0, FViewportX);
-      FViewportY := (ClientRect.Height - FPageHeight) div 2;
       if FHorizontalScrollbar.Visible then
         FViewportY := FViewportY - (FHorizontalScrollbar.Height div 2);
       FViewportY := max(0, FViewportY);
@@ -477,7 +534,7 @@ end;
 procedure TLCLPdfControl.Paint;
 var
   curPage : TPdfPage;
-  x, y, i : Integer;
+  x, y, i, tmp : Integer;
   rect : TRect;
 begin
   inherited Paint;
@@ -492,17 +549,35 @@ begin
 
     for i := 0 to FHighlightTextRects.Count - 1 do
     begin
-      rect := curPage.PageToDevice(x, y, FPageWidth, FPageHeight, FHighlightTextRects.Get(i).R);
+      rect := curPage.PageToDevice(x, y, FPageWidth, FPageHeight, FHighlightTextRects.Get(i).R, FRotation);
+      if rect.Left > rect.Right then
+      begin
+        tmp := rect.Left;
+        rect.Left := rect.Right;
+        rect.Right := tmp;
+      end;
+      if rect.Top > rect.Bottom then
+      begin
+        tmp := rect.Bottom;
+        rect.Bottom := rect.Top;
+        rect.Top := tmp;
+      end;
+      //rect.Left := rect.Left - FViewportX;
+      //rect.Right := rect.Right - FViewportX;
+      //rect.Top := rect.Top - FViewportY;
+      //rect.Bottom := rect.Bottom - FViewportY;
+      (*
       if FHorizontalScrollbar.Visible then
       begin
-        rect.Left := rect.Left - FHorizontalScrollbar.Position;
-        rect.Right := rect.Right - FHorizontalScrollbar.Position;
+        rect.Left := rect.Left + FHorizontalScrollbar.Position;
+        rect.Right := rect.Right + FHorizontalScrollbar.Position;
       end;
       if FVerticalScrollbar.Visible then
       begin
-        rect.Top := rect.Top - FVerticalScrollbar.Position;
-        rect.Bottom := rect.Bottom - FVerticalScrollbar.Position;
+        rect.Top := rect.Top + FVerticalScrollbar.Position;
+        rect.Bottom := rect.Bottom + FVerticalScrollbar.Position;
       end;
+      *)
       Canvas.Brush.Color:= FHighlightTextColor;
       DrawTransparentRectangle(Canvas, rect, clYellow, 50);
     end;
@@ -523,7 +598,7 @@ begin
       exit;
 
     curPage := FDocument.Pages[FPageIndex];
-    PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
+    PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y, FRotation);
 
     Cursor := crDefault;
 
@@ -579,7 +654,7 @@ begin
       if not Focused and not(csNoFocus in ControlStyle) then
         SetFocus;
 
-      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
+      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y, FRotation);
       if Button = mbLeft then
       begin
         if curPage.FormEventLButtonDown(Shift, PagePt.X, PagePt.Y) then
@@ -596,7 +671,7 @@ begin
 
     if Button = mbLeft then
     begin
-      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
+      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y, FRotation);
       Url := '';
       if curPage.IsUriLinkAtPoint(PagePt.X, PagePt.Y, Url) then
       begin
@@ -624,7 +699,7 @@ begin
     curPage := FDocument.Pages[FPageIndex];
     if AllowFormEvents  then
     begin
-      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y);
+      PagePt := curPage.DeviceToPage(PageX, PageY, FPageWidth, FPageHeight, X, Y, FRotation);
       if (Button = mbLeft) and curPage.FormEventLButtonUp(Shift, PagePt.X, PagePt.Y) then
         Exit;
       if (Button = mbRight) and curPage.FormEventRButtonUp(Shift, PagePt.X, PagePt.Y) then

@@ -2487,21 +2487,33 @@ var
   tmpLazImage : TLazIntfImage;
   ImgHandle,ImgMaskHandle: HBitmap;
   PdfBmp: TPdfBitmap;
+  w, h : integer;
 begin
   tmpBitmap := TBitmap.Create;
   tmpLazImage := TLazIntfImage.Create(0, 0);
   try
-    tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(Width, Height);
+    if (Rotate = prNormal) or (Rotate = pr180) then
+    begin
+      w := Width;
+      h := Height;
+    end
+    else
+    begin
+      w := Height;
+      h := Width;
+    end;
+    tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(w, h);
     tmpLazImage.CreateData;
-    PdfBmp := TPdfBitmap.Create(Width, Height, bfBGRA, tmpLazImage.PixelData, Width * 4);
+    PdfBmp := TPdfBitmap.Create(w, h, bfBGRA, tmpLazImage.PixelData, w * 4);
     try
-      PdfBmp.FillRect(0, 0, Width, Height, $FF000000 or PageBackground);
-      DrawToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
-      DrawFormToPdfBitmap(PdfBmp, 0, 0, Width, Height, Rotate, Options);
+      PdfBmp.FillRect(0, 0, w, h, $FF000000 or PageBackground);
+      DrawToPdfBitmap(PdfBmp, 0, 0, w, h, Rotate, Options);
+      DrawFormToPdfBitmap(PdfBmp, 0, 0, w, h, Rotate, Options);
 
       tmpLazImage.CreateBitmaps(ImgHandle,ImgMaskHandle,false);
       tmpBitmap.Handle:=ImgHandle;
       tmpBitmap.MaskHandle:=ImgMaskHandle;
+      tmpBitmap.SaveToFile('c:\temp\ciccio.bmp');
       C.Draw(X, Y, tmpBitmap);
     finally
       PdfBmp.Free;
