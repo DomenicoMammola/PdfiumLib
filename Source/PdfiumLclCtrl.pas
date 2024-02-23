@@ -547,39 +547,48 @@ begin
     y := PageY;
     curPage.DrawToCanvas(Self.Canvas, x, y, FPageWidth, FPageHeight, FRotation, FDrawOptions);
 
-    for i := 0 to FHighlightTextRects.Count - 1 do
+    if FHighlightTextRects.Count > 0 then
     begin
-      rect := curPage.PageToDevice(x, y, FPageWidth, FPageHeight, FHighlightTextRects.Get(i).R, FRotation);
-      if rect.Left > rect.Right then
+      //if not ((FRotation = prNormal) or (FRotation = pr180)) then
+      //begin
+      //  tmp := x;
+      //  x := y;
+      //  y := tmp;
+      //end;
+      for i := 0 to FHighlightTextRects.Count - 1 do
       begin
-        tmp := rect.Left;
-        rect.Left := rect.Right;
-        rect.Right := tmp;
+        rect := curPage.PageToDevice(0, 0, FPageWidth, FPageHeight, FHighlightTextRects.Get(i).R, FRotation);
+        if (FRotation = prNormal) or (FRotation = pr180) then
+        begin
+          rect.Left := rect.Left + x;
+          rect.Right := rect.Right + x;
+          rect.Top := rect.Top + y;
+          rect.Bottom := rect.Bottom + y;
+        end
+        else
+        begin
+          (*
+          rect.Left := rect.Left + y;
+          rect.Right := rect.Right + y;
+          rect.Top := rect.Top + x;
+          rect.Bottom := rect.Bottom + x;
+          *)
+        end;
+        if rect.Left > rect.Right then
+        begin
+          tmp := rect.Left;
+          rect.Left := rect.Right;
+          rect.Right := tmp;
+        end;
+        if rect.Top > rect.Bottom then
+        begin
+          tmp := rect.Bottom;
+          rect.Bottom := rect.Top;
+          rect.Top := tmp;
+        end;
+        Canvas.Brush.Color:= FHighlightTextColor;
+        DrawTransparentRectangle(Canvas, rect, clYellow, 50);
       end;
-      if rect.Top > rect.Bottom then
-      begin
-        tmp := rect.Bottom;
-        rect.Bottom := rect.Top;
-        rect.Top := tmp;
-      end;
-      //rect.Left := rect.Left - FViewportX;
-      //rect.Right := rect.Right - FViewportX;
-      //rect.Top := rect.Top - FViewportY;
-      //rect.Bottom := rect.Bottom - FViewportY;
-      (*
-      if FHorizontalScrollbar.Visible then
-      begin
-        rect.Left := rect.Left + FHorizontalScrollbar.Position;
-        rect.Right := rect.Right + FHorizontalScrollbar.Position;
-      end;
-      if FVerticalScrollbar.Visible then
-      begin
-        rect.Top := rect.Top + FVerticalScrollbar.Position;
-        rect.Bottom := rect.Bottom + FVerticalScrollbar.Position;
-      end;
-      *)
-      Canvas.Brush.Color:= FHighlightTextColor;
-      DrawTransparentRectangle(Canvas, rect, clYellow, 50);
     end;
   end;
 end;
