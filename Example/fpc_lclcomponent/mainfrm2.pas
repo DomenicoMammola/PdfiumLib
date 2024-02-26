@@ -1,5 +1,7 @@
 unit mainfrm2;
 
+{$DEFINE LCL_CTRL}
+
 interface
 
 uses

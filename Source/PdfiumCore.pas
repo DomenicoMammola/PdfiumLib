@@ -1608,7 +1608,7 @@ begin
           finally
             FreeAndNil(FFileStream);
           end;
-        end
+        end;
       dloOnDemand:
         LoadFromActiveStream(FFileStream, Password);
     end;
