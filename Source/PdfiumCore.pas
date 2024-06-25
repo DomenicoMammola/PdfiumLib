@@ -2513,7 +2513,6 @@ begin
       tmpLazImage.CreateBitmaps(ImgHandle,ImgMaskHandle,false);
       tmpBitmap.Handle:=ImgHandle;
       tmpBitmap.MaskHandle:=ImgMaskHandle;
-      tmpBitmap.SaveToFile('c:\temp\ciccio.bmp');
       C.Draw(X, Y, tmpBitmap);
     finally
       PdfBmp.Free;
