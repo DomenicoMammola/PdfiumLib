@@ -1084,11 +1084,14 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-var
-  FFITimers: array of record
+type
+  TFFITimer = record
     Id: UINT;
     Proc: TFPDFTimerCallback;
   end;
+
+var
+  FFITimers: array of TFFITimer;
   FFITimersCritSect: TRTLCriticalSection;
 
 procedure FormTimerProc(hwnd: HWND; uMsg: UINT; timerId: UINT; dwTime: DWORD); stdcall;
