@@ -449,11 +449,13 @@ end;
 procedure TLCLPdfControl.WMKeyDown(var Message: TLMKeyDown);
 var
   curPage : TPdfPage;
+  Shift: TShiftState;
 begin
   if AllowFormEvents and PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
-    curPage.FormEventKeyDown(Message.CharCode, Message.KeyData);
+    Shift := KeyDataToShiftState(Message.KeyData);
+    curPage.FormEventKeyDown(Message.CharCode, Shift);
   end;
   inherited;
 end;
@@ -461,11 +463,13 @@ end;
 procedure TLCLPdfControl.WMKeyUp(var Message: TLMKeyUp);
 var
   curPage : TPdfPage;
+  Shift: TShiftState;
 begin
   if AllowFormEvents and PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
-    if curPage.FormEventKeyUp(Message.CharCode, Message.KeyData) then
+    Shift := KeyDataToShiftState(Message.KeyData);
+    if curPage.FormEventKeyUp(Message.CharCode, Shift) then
       Exit;
   end;
   inherited;
@@ -474,11 +478,13 @@ end;
 procedure TLCLPdfControl.WMChar(var Message: TLMChar);
 var
   curPage : TPdfPage;
+  Shift: TShiftState;
 begin
   if AllowFormEvents and PageIndexValid then
   begin
     curPage := FDocument.Pages[FPageIndex];
-    if curPage.FormEventKeyPress(Message.CharCode, Message.KeyData) then
+    Shift := KeyDataToShiftState(Message.KeyData);
+    if curPage.FormEventKeyPress(Message.CharCode, Shift) then
       Exit;
   end;
   inherited;
