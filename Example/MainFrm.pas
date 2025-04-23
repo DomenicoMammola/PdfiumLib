@@ -132,7 +132,9 @@ end;
 
 procedure TfrmMain.btnHighlightClick(Sender: TObject);
 begin
-  FCtrl.HightlightText('the', False, False);
+  FCtrl.ClearHighlightText;
+  FCtrl.AddHightlightText('the', False, True);
+  FCtrl.AddHightlightText('in', False, True);
 end;
 
 procedure TfrmMain.btnScaleClick(Sender: TObject);
@@ -235,7 +237,7 @@ end;
 
 procedure TfrmMain.btnAddAnnotationClick(Sender: TObject);
 begin
-  // Add a new annotation and make it persietent so that is can be shown and saved to a file.
+  // Add a new annotation and make it persistent, so that it can be shown and saved to a file.
   FCtrl.CurrentPage.Annotations.NewTextAnnotation('My Annotation Text', TPdfRect.New(200, 750, 250, 700));
   FCtrl.CurrentPage.ApplyChanges;
 //  FCtrl.Document.SaveToFile(ExtractFileDir(ParamStr(0)) + PathDelim + 'Test_annot.pdf');
