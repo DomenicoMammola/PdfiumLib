@@ -2,9 +2,6 @@ unit PdfiumCore;
 
 {$IFDEF FPC}
   {$MODE DelphiUnicode}
-  {$IFDEF LINUX}
-    {$DEFINE FPC_LINUX}
-  {$ENDIF LINUX}
 {$ENDIF FPC}
 
 {$IFNDEF FPC}
@@ -25,9 +22,6 @@ uses
     {$ENDIF FPC}
   ExtCtrls, // for TTimer
   {$ENDIF MSWINDOWS}
-  {$IFDEF FPC}
-  Graphics, IntfGraphics,
-  {$ENDIF FPC}
   Types, SysUtils, Classes, Contnrs,
   PdfiumLib;
 
@@ -501,6 +495,7 @@ type
     destructor Destroy; override;
     procedure Close;
     function IsLoaded: Boolean;
+
     {$IFDEF MSWINDOWS}
     // Draw the PDF page and the form into the device context.
     procedure Draw(DC: HDC; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
@@ -516,10 +511,6 @@ type
     // Draw the PDF form field values into the bitmap.
     procedure DrawFormToPdfBitmap(APdfBitmap: TPdfBitmap; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
       const Options: TPdfPageRenderOptions = []);
-    {$IFDEF FPC}
-    procedure DrawToCanvas(C: TCanvas; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation = prNormal;
-      const Options: TPdfPageRenderOptions = []; PageBackground: TColorRef = $FFFFFF);
-    {$ENDIF FPC}
 
     function DeviceToPage(X, Y, Width, Height: Integer; DeviceX, DeviceY: Integer; Rotate: TPdfPageRotation = prNormal): TPdfPoint; overload;
     function PageToDevice(X, Y, Width, Height: Integer; PageX, PageY: Double; Rotate: TPdfPageRotation = prNormal): TPoint; overload;
@@ -2499,50 +2490,6 @@ begin
   end;
 end;
 
-{$IFDEF FPC}
-procedure TPdfPage.DrawToCanvas(C: TCanvas; X, Y, Width, Height: Integer; Rotate: TPdfPageRotation; const Options: TPdfPageRenderOptions; PageBackground: TColorRef);
-var
-  tmpBitmap: TBitmap;
-  tmpLazImage : TLazIntfImage;
-  ImgHandle,ImgMaskHandle: HBitmap;
-  PdfBmp: TPdfBitmap;
-  w, h : integer;
-begin
-  tmpBitmap := TBitmap.Create;
-  tmpLazImage := TLazIntfImage.Create(0, 0);
-  try
-    if (Rotate = prNormal) or (Rotate = pr180) then
-    begin
-      w := Width;
-      h := Height;
-    end
-    else
-    begin
-      w := Height;
-      h := Width;
-    end;
-    tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(w, h);
-    tmpLazImage.CreateData;
-    PdfBmp := TPdfBitmap.Create(w, h, bfBGRA, tmpLazImage.PixelData, w * 4);
-    try
-      PdfBmp.FillRect(0, 0, w, h, $FF000000 or PageBackground);
-      DrawToPdfBitmap(PdfBmp, 0, 0, w, h, Rotate, Options);
-      DrawFormToPdfBitmap(PdfBmp, 0, 0, w, h, Rotate, Options);
-
-      tmpLazImage.CreateBitmaps(ImgHandle,ImgMaskHandle,false);
-      tmpBitmap.Handle:=ImgHandle;
-      tmpBitmap.MaskHandle:=ImgMaskHandle;
-      C.Draw(X, Y, tmpBitmap);
-    finally
-      PdfBmp.Free;
-    end;
-  finally
-    tmpLazImage.Free;
-    tmpBitmap.Free;
-  end;
-end;
-{$ENDIF FPC}
-
 procedure TPdfPage.UpdateMetrics;
 begin
   FWidth := FPDF_GetPageWidthF(FPage);
@@ -4371,7 +4318,6 @@ end;
 
 procedure TPdfDocumentPrinter.GetPrinterBounds;
 begin
-  {$IFNDEF FPC_LINUX}
   FPaperSize.cx := GetDeviceCaps(FPrinterDC, PHYSICALWIDTH);
   FPaperSize.cy := GetDeviceCaps(FPrinterDC, PHYSICALHEIGHT);
 
@@ -4380,7 +4326,6 @@ begin
 
   FMargins.X := GetDeviceCaps(FPrinterDC, PHYSICALOFFSETX);
   FMargins.Y := GetDeviceCaps(FPrinterDC, PHYSICALOFFSETY);
-  {$ENDIF ~FPC_LINUX}
 end;
 
 function TPdfDocumentPrinter.BeginPrint(const AJobTitle: string): Boolean;
@@ -4546,13 +4491,11 @@ begin
   X := X + (Width - ScaledWidth) / 2;
   Y := Y + (Height - ScaledHeight) / 2;
 
-  {$IFNDEF FPC_LINUX}
   APage.Draw(
     FPrinterDC,
     RoundToInt(X), RoundToInt(Y), RoundToInt(ScaledWidth), RoundToInt(ScaledHeight),
     prNormal, [proPrinting, proAnnotations]
   );
-  {$ENDIF ~FPC_LINUX}
 end;
 {$ENDIF MSWINDOWS}
 
