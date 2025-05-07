@@ -1,6 +1,8 @@
-unit PdfiumLaz;
+unit PdfiumGraphics32;
 
-{$mode objfpc}{$H+}
+{$ifdef fpc}
+  {$mode delphi}
+{$endif}
 
 interface
 
@@ -9,65 +11,80 @@ uses
   PdfiumCore;
 
 procedure DrawPageToBitmap(aPage: TPdfPage; aBitmap: TBitmap; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation; const aOptions: TPdfPageRenderOptions; aPageBackground: TColor);
-
 procedure DrawPageToCanvas(aPage: TPdfPage; aCanvas: TCanvas; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation; const aOptions: TPdfPageRenderOptions; aPageBackground: TColor);
 
 implementation
 
 uses
-  IntfGraphics, LCLType;
-
+  GR32;
 
 procedure DrawPageToBitmap(aPage: TPdfPage; aBitmap: TBitmap; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation; const aOptions: TPdfPageRenderOptions; aPageBackground: TColor);
 var
-  tmpLazImage : TLazIntfImage;
-  ImgHandle,ImgMaskHandle: HBitmap;
+  tmpG32Bitmap : TBitmap32;
   PdfBmp: TPdfBitmap;
   w, h : integer;
 begin
-  tmpLazImage := TLazIntfImage.Create(0, 0);
+  if (aRotate = prNormal) or (aRotate = pr180) then
+  begin
+    w := aWidth;
+    h := aHeight;
+  end
+  else
+  begin
+    w := aHeight;
+    h := aWidth;
+  end;
+
+  aBitmap.Width:= w;
+  aBitmap.Height:= h;
+
+  tmpG32Bitmap := TBitmap32.Create(w, h);
   try
-    if (aRotate = prNormal) or (aRotate = pr180) then
-    begin
-      w := aWidth;
-      h := aHeight;
-    end
-    else
-    begin
-      w := aHeight;
-      h := aWidth;
-    end;
-    tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(w, h);
-    tmpLazImage.CreateData;
-    PdfBmp := TPdfBitmap.Create(w, h, bfBGRA, tmpLazImage.PixelData, w * 4);
+    PdfBmp := TPdfBitmap.Create(w, h, bfBGRA, tmpG32Bitmap.Bits, w * 4);
     try
       PdfBmp.FillRect(0, 0, w, h, $FF000000 or aPageBackground);
       aPage.DrawToPdfBitmap(PdfBmp, 0, 0, w, h, aRotate, aOptions);
       aPage.DrawFormToPdfBitmap(PdfBmp, 0, 0, w, h, aRotate, aOptions);
-
-      tmpLazImage.CreateBitmaps(ImgHandle,ImgMaskHandle,false);
-      aBitmap.Handle:=ImgHandle;
-      aBitmap.MaskHandle:=ImgMaskHandle;
+      aBitmap.Assign(tmpG32Bitmap);
     finally
       PdfBmp.Free;
     end;
   finally
-    tmpLazImage.Free;
+    tmpG32Bitmap.Free;
   end;
 end;
 
 procedure DrawPageToCanvas(aPage: TPdfPage; aCanvas: TCanvas; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation; const aOptions: TPdfPageRenderOptions; aPageBackground: TColor);
 var
-  tmpBitmap : TBitmap;
+  tmpG32Bitmap : TBitmap32;
+  PdfBmp: TPdfBitmap;
+  w, h : integer;
 begin
-  tmpBitmap := TBitmap.Create;
+  if (aRotate = prNormal) or (aRotate = pr180) then
+  begin
+    w := aWidth;
+    h := aHeight;
+  end
+  else
+  begin
+    w := aHeight;
+    h := aWidth;
+  end;
+
+  tmpG32Bitmap := TBitmap32.Create(w, h);
   try
-    DrawPageToBitmap(aPage, tmpBitmap, aX, aY, aWidth, aHeight, aRotate, aOptions, aPageBackground);
-    aCanvas.Draw(aX, aY, tmpBitmap);
+    PdfBmp := TPdfBitmap.Create(w, h, bfBGRA, tmpG32Bitmap.Bits, w * 4);
+    try
+      PdfBmp.FillRect(0, 0, w, h, $FF000000 or aPageBackground);
+      aPage.DrawToPdfBitmap(PdfBmp, 0, 0, w, h, aRotate, aOptions);
+      aPage.DrawFormToPdfBitmap(PdfBmp, 0, 0, w, h, aRotate, aOptions);
+      tmpG32Bitmap.DrawTo(aCanvas.Handle, aX, aY);
+    finally
+      PdfBmp.Free;
+    end;
   finally
-    tmpBitmap.Free;
+    tmpG32Bitmap.Free;
   end;
 end;
-
 
 end.

@@ -53,7 +53,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..\..\Source"/>
+      <OtherUnitFiles Value="..\..\Source;..\..\..\PdfiumLibPackPaul\PdfiumLib\Example\lib\graphics32\Source"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Linking>

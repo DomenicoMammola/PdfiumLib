@@ -91,8 +91,6 @@ type
 //    procedure UpdateFocus(AFocused: Boolean);
     function PageX : integer;
     function PageY : integer;
-    procedure DrawPageToCanvas(aPage: TPdfPage; aC: TCanvas; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation = prNormal;
-      const aOptions: TPdfPageRenderOptions = []; aPageBackground: TColor = $FFFFFF);
   protected
     procedure Paint; override;
     procedure MouseMove(Shift: TShiftState; X,Y: Integer); override;
@@ -123,7 +121,10 @@ type
 implementation
 
 uses
-  Math, Forms, LCLIntf, LCLType, SysUtils, PdfiumLaz;
+  Math, Forms, LCLIntf, LCLType, SysUtils
+  ,PdfiumLaz
+  //,PdfiumGraphics32
+  ;
 
 // https://forum.lazarus.freepascal.org/index.php?topic=32648.0
 procedure DrawTransparentRectangle(Canvas: TCanvas; Rect: TRect; Color: TColor; Transparency: Integer);
@@ -541,19 +542,6 @@ begin
     Result := Result - FVerticalScrollbar.Position;
 end;
 
-procedure TLCLPdfControl.DrawPageToCanvas(aPage: TPdfPage; aC: TCanvas; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation; const aOptions: TPdfPageRenderOptions; aPageBackground: TColor);
-var
-  tmpBitmap: TBitmap;
-begin
-  tmpBitmap := TBitmap.Create;
-  try
-    DrawPageToBitmap(aPage, tmpBitmap, aX, aY, aWidth, aHeight, aRotate, aOptions, aPageBackground);
-      aC.Draw(aX, aY, tmpBitmap);
-  finally
-    tmpBitmap.Free;
-  end;
-end;
-
 procedure TLCLPdfControl.Paint;
 var
   curPage : TPdfPage;
@@ -568,7 +556,7 @@ begin
     curPage := FDocument.Pages[FPageIndex];
     x := PageX;
     y := PageY;
-    DrawPageToCanvas(curPage, Self.Canvas, x, y, FPageWidth, FPageHeight, FRotation, FDrawOptions);
+    DrawPageToCanvas(curPage, Self.Canvas, x, y, FPageWidth, FPageHeight, FRotation, FDrawOptions, Self.Color);
 
     if FHighlightTextRects.Count > 0 then
     begin
