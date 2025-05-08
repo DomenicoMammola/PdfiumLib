@@ -55,6 +55,7 @@ type
     FHorizontalScrollbar : TScrollbar;
     FVerticalScrollbar : TScrollBar;
     FHighlightTextRects : TLCLPdfControlPdfRects;
+    FPageBackgroundColor : TColor;
 
     FScaleMode : TPdfControlScaleMode;
     FZoomPercentage : Integer;
@@ -71,6 +72,7 @@ type
 
     procedure SetDrawOptions(AValue: TPdfPageRenderOptions);
     procedure SetHighLightTextColor(AValue: TColor);
+    procedure SetPageBackgroundColor(AValue: TColor);
     procedure SetRotation(AValue: TPdfPageRotation);
     procedure SetScaleMode(AValue: TPdfControlScaleMode);
     procedure SetZoomPercentage(AValue: Integer);
@@ -115,6 +117,8 @@ type
     property DrawOptions: TPdfPageRenderOptions read FDrawOptions write SetDrawOptions default cPdfControlDefaultDrawOptions;
     property HighLightTextColor : TColor read FHighLightTextColor write SetHighLightTextColor default cHighLightTextColor;
     property Rotation: TPdfPageRotation read FRotation write SetRotation default prNormal;
+
+    property PageBackgroundColor: TColor read FPageBackgroundColor write SetPageBackgroundColor;
   end;
 
 
@@ -122,8 +126,9 @@ implementation
 
 uses
   Math, Forms, LCLIntf, LCLType, SysUtils
-  ,PdfiumLaz
+  //,PdfiumLaz
   //,PdfiumGraphics32
+  , PdfiumImage32
   ;
 
 // https://forum.lazarus.freepascal.org/index.php?topic=32648.0
@@ -215,6 +220,13 @@ procedure TLCLPdfControl.SetHighLightTextColor(AValue: TColor);
 begin
   if FHighLightTextColor = AValue then Exit;
   FHighLightTextColor := AValue;
+  Invalidate;
+end;
+
+procedure TLCLPdfControl.SetPageBackgroundColor(AValue: TColor);
+begin
+  if FPageBackgroundColor=AValue then Exit;
+  FPageBackgroundColor:=AValue;
   Invalidate;
 end;
 
@@ -556,7 +568,7 @@ begin
     curPage := FDocument.Pages[FPageIndex];
     x := PageX;
     y := PageY;
-    DrawPageToCanvas(curPage, Self.Canvas, x, y, FPageWidth, FPageHeight, FRotation, FDrawOptions, Self.Color);
+    DrawPageToCanvas(curPage, Self.Canvas, x, y, FPageWidth, FPageHeight, FRotation, FDrawOptions, PageBackgroundColor);
 
     if FHighlightTextRects.Count > 0 then
     begin
@@ -764,6 +776,7 @@ begin
   FHorizontalScrollbar.Visible := false;
   FVerticalScrollbar.Visible := false;
   FVerticalScrollbar.OnChange:= @OnChangeVerticalScrollbar;
+  FPageBackgroundColor:= clWhite;
 end;
 
 destructor TLCLPdfControl.Destroy;

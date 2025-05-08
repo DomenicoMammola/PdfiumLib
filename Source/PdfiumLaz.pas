@@ -39,9 +39,9 @@ begin
     end;
     tmpLazImage.DataDescription.Init_BPP32_B8G8R8A8_BIO_TTB(w, h);
     tmpLazImage.CreateData;
-    PdfBmp := TPdfBitmap.Create(w, h, bfBGRA, tmpLazImage.PixelData, w * 4);
+    PdfBmp := TPdfBitmap.Create(w, h, bfBGRx, tmpLazImage.PixelData, w * 4);
     try
-      PdfBmp.FillRect(0, 0, w, h, $FF000000 or aPageBackground);
+      PdfBmp.FillRect(0, 0, w, h, ColorToRGB(aPageBackground));
       aPage.DrawToPdfBitmap(PdfBmp, 0, 0, w, h, aRotate, aOptions);
       aPage.DrawFormToPdfBitmap(PdfBmp, 0, 0, w, h, aRotate, aOptions);
 

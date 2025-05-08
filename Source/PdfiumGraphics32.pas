@@ -40,7 +40,7 @@ begin
 
   tmpG32Bitmap := TBitmap32.Create(w, h);
   try
-    PdfBmp := TPdfBitmap.Create(w, h, bfBGRA, tmpG32Bitmap.Bits, w * 4);
+    PdfBmp := TPdfBitmap.Create(w, h, bfBGRx, tmpG32Bitmap.Bits, w * 4);
     try
       PdfBmp.FillRect(0, 0, w, h, $FF000000 or aPageBackground);
       aPage.DrawToPdfBitmap(PdfBmp, 0, 0, w, h, aRotate, aOptions);
@@ -73,7 +73,7 @@ begin
 
   tmpG32Bitmap := TBitmap32.Create(w, h);
   try
-    PdfBmp := TPdfBitmap.Create(w, h, bfBGRA, tmpG32Bitmap.Bits, w * 4);
+    PdfBmp := TPdfBitmap.Create(w, h, bfBGRx, tmpG32Bitmap.Bits, w * 4);
     try
       PdfBmp.FillRect(0, 0, w, h, $FF000000 or aPageBackground);
       aPage.DrawToPdfBitmap(PdfBmp, 0, 0, w, h, aRotate, aOptions);
