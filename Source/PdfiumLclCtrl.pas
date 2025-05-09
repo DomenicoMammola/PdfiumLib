@@ -126,9 +126,9 @@ implementation
 
 uses
   Math, Forms, LCLIntf, LCLType, SysUtils
-  //,PdfiumLaz
+  ,PdfiumLaz
   //,PdfiumGraphics32
-  , PdfiumImage32
+  //, PdfiumImage32
   ;
 
 // https://forum.lazarus.freepascal.org/index.php?topic=32648.0
