@@ -21,6 +21,8 @@ type
     smZoom
   );
 
+  TLCLPdfControlDrawPageToCanvasProcedure = procedure (aPage: TPdfPage; aCanvas: TCanvas; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation; const aOptions: TPdfPageRenderOptions; aPageBackground: TColor);
+
   TLCLPdfControlPdfRectShell = class
   public
     R : TPdfRect;
@@ -122,14 +124,13 @@ type
   end;
 
 
+var
+  GraphicsBackend_DrawPageToCanvas : TLCLPdfControlDrawPageToCanvasProcedure;
+
 implementation
 
 uses
-  Math, Forms, LCLIntf, LCLType, SysUtils
-  //,PdfiumLaz
-  //,PdfiumGraphics32
-  , PdfiumImage32
-  ;
+  Math, Forms, LCLIntf, LCLType, SysUtils;
 
 // https://forum.lazarus.freepascal.org/index.php?topic=32648.0
 procedure DrawTransparentRectangle(Canvas: TCanvas; Rect: TRect; Color: TColor; Transparency: Integer);
@@ -568,7 +569,7 @@ begin
     curPage := FDocument.Pages[FPageIndex];
     x := PageX;
     y := PageY;
-    DrawPageToCanvas(curPage, Self.Canvas, x, y, FPageWidth, FPageHeight, FRotation, FDrawOptions, PageBackgroundColor);
+    GraphicsBackend_DrawPageToCanvas(curPage, Self.Canvas, x, y, FPageWidth, FPageHeight, FRotation, FDrawOptions, PageBackgroundColor);
 
     if FHighlightTextRects.Count > 0 then
     begin

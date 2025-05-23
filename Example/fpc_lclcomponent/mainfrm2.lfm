@@ -161,6 +161,23 @@ object frmMain: TfrmMain
       TabOrder = 13
       OnClick = BtnRotateRightClick
     end
+    object CBGraphicBackend: TComboBox
+      Left = 424
+      Height = 21
+      Top = 32
+      Width = 92
+      ItemHeight = 13
+      ItemIndex = 0
+      Items.Strings = (
+        'LCL'
+        'Graphics32'
+        'Image32'
+      )
+      Style = csDropDownList
+      TabOrder = 14
+      Text = 'LCL'
+      OnChange = CBGraphicBackendChange
+    end
   end
   object PrintDialog1: TPrintDialog
     MinPage = 1

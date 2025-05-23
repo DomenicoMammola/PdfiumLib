@@ -20,6 +20,7 @@ type
     btnScale: TButton;
     BtnRotateLeft: TButton;
     BtnRotateRight: TButton;
+    CBGraphicBackend: TComboBox;
     OpenButton: TButton;
     chkLCDOptimize: TCheckBox;
     chkSmoothScroll: TCheckBox;
@@ -35,6 +36,7 @@ type
     pnlButtons: TPanel;
     procedure BtnRotateLeftClick(Sender: TObject);
     procedure BtnRotateRightClick(Sender: TObject);
+    procedure CBGraphicBackendChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnPrevClick(Sender: TObject);
     procedure btnNextClick(Sender: TObject);
@@ -66,7 +68,8 @@ var
 implementation
 
 uses
-  TypInfo, Printers;
+  TypInfo, Printers,
+  PdfiumLaz, PdfiumGraphics32, PdfiumImage32;
 
 {$R *.lfm}
 
@@ -96,6 +99,8 @@ begin
   FCtrl.BufferedPageDraw := false;
   {$ENDIF}
   {$ENDIF}
+  CBGraphicBackendChange(nil);
+
   FCtrl.ScaleMode := smFitAuto;
 
   edtZoom.Value := FCtrl.ZoomPercentage;
@@ -120,6 +125,15 @@ begin
     pr90Clockwise: FCtrl.Rotation:= pr180;
     pr180: FCtrl.Rotation:= pr90CounterClockwide;
     pr90CounterClockwide: FCtrl.Rotation:= prNormal;
+  end;
+end;
+
+procedure TfrmMain.CBGraphicBackendChange(Sender: TObject);
+begin
+  case CBGraphicBackend.ItemIndex of
+    0: GraphicsBackend_DrawPageToCanvas:= @PdfiumLaz.DrawPageToCanvas;
+    1: GraphicsBackend_DrawPageToCanvas:= @PdfiumGraphics32.DrawPageToCanvas;
+    2: GraphicsBackend_DrawPageToCanvas:= @PdfiumImage32.DrawPageToCanvas;
   end;
 end;
 
