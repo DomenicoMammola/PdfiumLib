@@ -91,7 +91,7 @@ begin
   FThumbsCtrl := TPdfThumbsControl.Create(Self);
   FThumbsCtrl.Parent := Self;
   FThumbsCtrl.Align:= alBottom;
-  FThumbsCtrl.Height:= 100;
+  FThumbsCtrl.Height:= 200;
   FCtrl := TPdfPageViewControl.Create(Self);
   FCtrl.Parent := Self;
   FCtrl.Align := alClient;
