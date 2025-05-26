@@ -15,6 +15,7 @@ type
   { TPdfMatrix }
 
   // https://pypdfium2.readthedocs.io/en/v4/_modules/pypdfium2/_helpers/matrix.html
+  // https://forum.patagames.com/posts/t501-What-Is-Transformation-Matrix-and-How-to-Use-It
   TPdfMatrix = class
   strict private
     FMatrix : FS_MATRIX;
@@ -25,10 +26,12 @@ type
     constructor Create(const a, b, c, d, e, f: Single); overload;
     destructor Destroy; override;
 
-    procedure Translate(const x, y : Single);
-    procedure Scale(const x, y : Single);
+    procedure Translate(const deltaX, deltaY : Single);
+    procedure Scale(const percIncrementX, percIncrementY : Single);
     procedure Rotate(const aAngle : single; const aCounterClock : boolean = false; const aAngleInRadiant : boolean = false);
-    procedure Mirror(const aVertically, aHorizontally : boolean);
+    procedure HorizontalFlip;
+    procedure VerticalFlip;
+    procedure CentralFlip;
     procedure Skew(const x_angle, y_angle : single; aAnglesInRadiant : boolean = False);
 
     property Handle: FS_MATRIX read FMatrix;
@@ -50,7 +53,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure AddToPage(aDocument: TPdfDocument; aPage : TPdfPage; const x, y, aAngle: Single; const aCounterClock : boolean = false; const aAngleInRadiant : boolean = false);
+    procedure AddToPage(aDocument: TPdfDocument; aPage : TPdfPage; const x, y: Single);
 
     property Handle: FPDF_PAGEOBJECT read FImage;
     property FileName : String read FFileName write FFileName;
@@ -95,18 +98,18 @@ begin
   FMatrix.b := (FMatrix.a * b) + (FMatrix.b * d);
   FMatrix.c := (FMatrix.c * a) + (FMatrix.d * c);
   FMatrix.d := (FMatrix.c * b) + (FMatrix.d * d);
-  FMatrix.e := (FMatrix.e * a) + (FMatrix.f * c + e);
-  FMatrix.f := (FMatrix.e * b) + (FMatrix.f * d + f);
+  FMatrix.e := (FMatrix.e * a) + (FMatrix.f * c) + e;
+  FMatrix.f := (FMatrix.e * b) + (FMatrix.f * d) + f;
 end;
 
-procedure TPdfMatrix.Translate(const x, y: Single);
+procedure TPdfMatrix.Translate(const deltaX, deltaY: Single);
 begin
-  Self.Multiply(1, 0, 0, 1, x, y);
+  Self.Multiply(1, 0, 0, 1, deltaX, deltaY);
 end;
 
-procedure TPdfMatrix.Scale(const x, y: Single);
+procedure TPdfMatrix.Scale(const percIncrementX, percIncrementY: Single);
 begin
-  Self.Multiply(x, 0, 0, y, 0, 0);
+  Self.Multiply(percIncrementX, 0, 0, percIncrementY, 0, 0);
 end;
 
 procedure TPdfMatrix.Rotate(const aAngle: single; const aCounterClock: boolean; const aAngleInRadiant: boolean);
@@ -127,20 +130,21 @@ begin
     Self.Multiply(c, (-1 * s), s, c, 0, 0);
 end;
 
-procedure TPdfMatrix.Mirror(const aVertically, aHorizontally: boolean);
-var
-  a, b : float;
+procedure TPdfMatrix.HorizontalFlip;
 begin
-  if aVertically then
-    a := -1
-  else
-    a := 1;
-  if aHorizontally then
-    b := -1
-  else
-    b := 1;
-  Self.Scale(a, b);
+  Self.Multiply(-1, 0, 0, 1, 0, 0);
 end;
+
+procedure TPdfMatrix.VerticalFlip;
+begin
+  Self.Multiply(1, 0, 0, -1, 0, 0);
+end;
+
+procedure TPdfMatrix.CentralFlip;
+begin
+  Self.Multiply(-1, 0, 0, -1, 0, 0);
+end;
+
 
 procedure TPdfMatrix.Skew(const x_angle, y_angle: single; aAnglesInRadiant: boolean);
 var
@@ -168,7 +172,6 @@ var
   pngImg : TPortableNetworkGraphic;
   jpgImg : TJPEGImage;
   bmpImg : TBitmap;
-  lazImage : TLazIntfImage;
   w, h : integer;
 {$ENDIF}
 begin
@@ -182,7 +185,6 @@ begin
     jpgImg := nil;
     bmpImg := nil;
     pngImg := nil;
-    lazImage:= nil;
     try
       if ext = '.png' then
       begin
@@ -216,7 +218,6 @@ begin
       FreeAndNil(jpgImg);
       FreeAndNil(pngImg);
       FreeAndNil(bmpImg);
-      FreeAndNil(lazImage);
     end;
   end;
   {$ELSE}
@@ -237,23 +238,17 @@ begin
   inherited Destroy;
 end;
 
-procedure TPdfImage.AddToPage(aDocument: TPdfDocument; aPage: TPdfPage; const x, y, aAngle: Single; const aCounterClock : boolean; const aAngleInRadiant : boolean);
+procedure TPdfImage.AddToPage(aDocument: TPdfDocument; aPage: TPdfPage; const x, y: Single);
 var
   matrix : TPdfMatrix;
-  page_obj_image : FPDF_PAGEOBJECT;
 begin
   CreateBitmap;
   FImage := FPDFPageObj_NewImageObj(aDocument.Handle);
 
-  // https://forum.patagames.com/posts/t501-What-Is-Transformation-Matrix-and-How-to-Use-It
   matrix := TPdfMatrix.Create;
   try
     matrix.Scale(FBitmap.Width, FBitmap.Height);
     matrix.Translate(x, y);
-    if aAngle <> 0 then
-      matrix.Rotate(aAngle, aCounterClock, aAngleInRadiant);
-
-
     FPDFPageObj_SetMatrix(FImage, @matrix.Handle);
     if FPDFImageObj_SetBitmap(nil, 0, FImage, FBitmap.Bitmap) <> 0 then
     begin

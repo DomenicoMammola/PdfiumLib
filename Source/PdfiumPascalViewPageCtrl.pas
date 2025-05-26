@@ -1,6 +1,8 @@
-unit PdfiumLclCtrl;
+unit PdfiumPascalViewPageCtrl;
 
-{$mode objfpc}{$H+}
+{$IFDEF FPC}
+  {$MODE DELPHI}
+{$ENDIF}
 
 interface
 
@@ -21,33 +23,33 @@ type
     smZoom
   );
 
-  TLCLPdfControlDrawPageToCanvasProcedure = procedure (aPage: TPdfPage; aCanvas: TCanvas; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation; const aOptions: TPdfPageRenderOptions; aPageBackground: TColor);
+  TPdfControlDrawPageToCanvasProcedure = procedure (aPage: TPdfPage; aCanvas: TCanvas; aX, aY, aWidth, aHeight: Integer; aRotate: TPdfPageRotation; const aOptions: TPdfPageRenderOptions; aPageBackground: TColor);
 
-  TLCLPdfControlPdfRectShell = class
+  TPdfControlPdfRectShell = class
   public
     R : TPdfRect;
   end;
 
-  { TLCLPdfControlPdfRects }
+  { TPdfPageViewControlPdfRects }
 
-  TLCLPdfControlPdfRects = class
+  TPdfControlPdfRects = class
   strict private
     FList : TObjectList;
   public
     constructor Create;
     destructor Destroy; override;
 
-    function Get(const aIndex : integer): TLCLPdfControlPdfRectShell;
+    function Get(const aIndex : integer): TPdfControlPdfRectShell;
     procedure Clear;
     function Count : integer;
-    function Add: TLCLPdfControlPdfRectShell;
+    function Add: TPdfControlPdfRectShell;
   end;
 
-  TLCLPdfControlWebLinkClickEvent = procedure(Sender: TObject; Url: string) of object;
+  TPdfControlWebLinkClickEvent = procedure(Sender: TObject; Url: string) of object;
 
-  { TLCLPdfControl }
+  { TPdfPageViewControl }
 
-  TLCLPdfControl = class(TCustomControl)
+  TPdfPageViewControl = class(TCustomControl)
   strict private
     FDocument: TPdfDocument;
     FPageIndex: Integer;
@@ -56,7 +58,7 @@ type
     FViewportX, FViewportY : Integer;
     FHorizontalScrollbar : TScrollbar;
     FVerticalScrollbar : TScrollBar;
-    FHighlightTextRects : TLCLPdfControlPdfRects;
+    FHighlightTextRects : TPdfControlPdfRects;
     FPageBackgroundColor : TColor;
 
     FScaleMode : TPdfControlScaleMode;
@@ -66,7 +68,7 @@ type
     FDrawOptions : TPdfPageRenderOptions;
     FHighLightTextColor : TColor;
 
-    FOnWebLinkClick : TLCLPdfControlWebLinkClickEvent;
+    FOnWebLinkClick : TPdfControlWebLinkClickEvent;
 
     procedure FormInvalidate(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
     procedure FormOutputSelectedRect(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
@@ -115,7 +117,7 @@ type
     property ZoomPercentage: Integer read FZoomPercentage write SetZoomPercentage default 100;
     property AllowFormEvents: Boolean read FAllowFormEvents write FAllowFormEvents default True;
 
-    property OnWebLinkClick: TLCLPdfControlWebLinkClickEvent read FOnWebLinkClick write FOnWebLinkClick;
+    property OnWebLinkClick: TPdfControlWebLinkClickEvent read FOnWebLinkClick write FOnWebLinkClick;
     property DrawOptions: TPdfPageRenderOptions read FDrawOptions write SetDrawOptions default cPdfControlDefaultDrawOptions;
     property HighLightTextColor : TColor read FHighLightTextColor write SetHighLightTextColor default cHighLightTextColor;
     property Rotation: TPdfPageRotation read FRotation write SetRotation default prNormal;
@@ -125,7 +127,7 @@ type
 
 
 var
-  GraphicsBackend_DrawPageToCanvas : TLCLPdfControlDrawPageToCanvasProcedure;
+  GraphicsBackend_DrawPageToCanvas : TPdfControlDrawPageToCanvasProcedure;
 
 implementation
 
@@ -156,82 +158,82 @@ begin
     end;
 end;
 
-{ TLCLPdfControlPdfRects }
+{ TPdfControlPdfRects }
 
-constructor TLCLPdfControlPdfRects.Create;
+constructor TPdfControlPdfRects.Create;
 begin
   FList := TObjectList.Create(true);
 end;
 
-destructor TLCLPdfControlPdfRects.Destroy;
+destructor TPdfControlPdfRects.Destroy;
 begin
   FList.Free;
   inherited Destroy;
 end;
 
-function TLCLPdfControlPdfRects.Get(const aIndex: integer): TLCLPdfControlPdfRectShell;
+function TPdfControlPdfRects.Get(const aIndex: integer): TPdfControlPdfRectShell;
 begin
-  Result := FList.Items[aIndex] as TLCLPdfControlPdfRectShell;
+  Result := FList.Items[aIndex] as TPdfControlPdfRectShell;
 end;
 
-procedure TLCLPdfControlPdfRects.Clear;
+procedure TPdfControlPdfRects.Clear;
 begin
   FList.Clear;
 end;
 
-function TLCLPdfControlPdfRects.Count: integer;
+function TPdfControlPdfRects.Count: integer;
 begin
   Result := FList.Count;
 end;
 
-function TLCLPdfControlPdfRects.Add: TLCLPdfControlPdfRectShell;
+function TPdfControlPdfRects.Add: TPdfControlPdfRectShell;
 begin
-  Result := TLCLPdfControlPdfRectShell.Create;
+  Result := TPdfControlPdfRectShell.Create;
   FList.Add(Result);
 end;
 
-{ TLCLPdfControl }
+{ TPdfPageViewControl }
 
-procedure TLCLPdfControl.FormInvalidate(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
+procedure TPdfPageViewControl.FormInvalidate(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
 begin
   Invalidate;
 end;
 
-procedure TLCLPdfControl.FormOutputSelectedRect(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
+procedure TPdfPageViewControl.FormOutputSelectedRect(Document: TPdfDocument; Page: TPdfPage; const PageRect: TPdfRect);
 begin
   {$IFDEF LINUX}
   WriteLn('ok');
   {$ENDIF}
 end;
 
-procedure TLCLPdfControl.FormGetCurrentPage(Document: TPdfDocument; var Page: TPdfPage);
+procedure TPdfPageViewControl.FormGetCurrentPage(Document: TPdfDocument; var Page: TPdfPage);
 begin
   if PageIndexValid then
     Page := FDocument.Pages[FPageIndex];
 end;
 
-procedure TLCLPdfControl.SetDrawOptions(AValue: TPdfPageRenderOptions);
+procedure TPdfPageViewControl.SetDrawOptions(AValue: TPdfPageRenderOptions);
 begin
   if FDrawOptions = AValue then Exit;
   FDrawOptions := AValue;
   Invalidate;
 end;
 
-procedure TLCLPdfControl.SetHighLightTextColor(AValue: TColor);
+procedure TPdfPageViewControl.SetHighLightTextColor(AValue: TColor);
 begin
   if FHighLightTextColor = AValue then Exit;
   FHighLightTextColor := AValue;
   Invalidate;
 end;
 
-procedure TLCLPdfControl.SetPageBackgroundColor(AValue: TColor);
+procedure TPdfPageViewControl.SetPageBackgroundColor(AValue: TColor);
 begin
   if FPageBackgroundColor=AValue then Exit;
   FPageBackgroundColor:=AValue;
   Invalidate;
 end;
 
-procedure TLCLPdfControl.SetRotation(AValue: TPdfPageRotation);
+procedure TPdfPageViewControl.SetRotation(AValue: TPdfPageRotation);
 begin
   if FRotation=AValue then Exit;
   FRotation:=AValue;
@@ -239,7 +241,7 @@ begin
   Invalidate;
 end;
 
-procedure TLCLPdfControl.SetScaleMode(AValue: TPdfControlScaleMode);
+procedure TPdfPageViewControl.SetScaleMode(AValue: TPdfControlScaleMode);
 begin
   if FScaleMode=AValue then Exit;
   FScaleMode:=AValue;
@@ -247,7 +249,7 @@ begin
   Invalidate;
 end;
 
-procedure TLCLPdfControl.SetZoomPercentage(AValue: Integer);
+procedure TPdfPageViewControl.SetZoomPercentage(AValue: Integer);
 begin
   if (AValue < 1) or (AValue > 1000) then
     exit;
@@ -258,7 +260,7 @@ begin
   Invalidate;
 end;
 
-procedure TLCLPdfControl.AdjustGeometry;
+procedure TPdfPageViewControl.AdjustGeometry;
   procedure AdjustScrollbar(aScrollbar: TScrollBar; aViewPortSize, aDocumentSize : integer);
   begin
     if aScrollbar.Visible then
@@ -406,7 +408,7 @@ begin
   end;
 end;
 
-procedure TLCLPdfControl.DocumentLoaded;
+procedure TPdfPageViewControl.DocumentLoaded;
 begin
   FHighlightTextRects.Clear;
   FPageIndex:= 0;
@@ -420,27 +422,27 @@ begin
     Invalidate;
 end;
 
-function TLCLPdfControl.PageIndexValid: boolean;
+function TPdfPageViewControl.PageIndexValid: boolean;
 begin
   Result := (FDocument.Active) and (FPageIndex < FDocument.PageCount);
 end;
 
-procedure TLCLPdfControl.SetSelection(Active: Boolean; StartIndex, StopIndex: Integer);
+procedure TPdfPageViewControl.SetSelection(Active: Boolean; StartIndex, StopIndex: Integer);
 begin
 
 end;
 
-procedure TLCLPdfControl.OnChangeHorizontalScrollbar(Sender: TObject);
-begin
-  Invalidate;
-end;
-
-procedure TLCLPdfControl.OnChangeVerticalScrollbar(Sender: TObject);
+procedure TPdfPageViewControl.OnChangeHorizontalScrollbar(Sender: TObject);
 begin
   Invalidate;
 end;
 
-procedure TLCLPdfControl.CMMouseWheel(var Message: TLMMouseEvent);
+procedure TPdfPageViewControl.OnChangeVerticalScrollbar(Sender: TObject);
+begin
+  Invalidate;
+end;
+
+procedure TPdfPageViewControl.CMMouseWheel(var Message: TLMMouseEvent);
 var
   direction : integer;
 begin
@@ -457,14 +459,14 @@ begin
     FVerticalScrollbar.Position := min(FVerticalScrollbar.Position + (direction * FVerticalScrollbar.PageSize), FVerticalScrollbar.Max - FVerticalScrollbar.PageSize);
 end;
 
-procedure TLCLPdfControl.CMMouseleave(var Message: TlMessage);
+procedure TPdfPageViewControl.CMMouseleave(var Message: TlMessage);
 begin
   if (*(Cursor = crIBeam) or*) (Cursor = crHandPoint) then
     Cursor := crDefault;
   inherited;
 end;
 
-procedure TLCLPdfControl.WMKeyDown(var Message: TLMKeyDown);
+procedure TPdfPageViewControl.WMKeyDown(var Message: TLMKeyDown);
 var
   curPage : TPdfPage;
   Shift: TShiftState;
@@ -478,7 +480,7 @@ begin
   inherited;
 end;
 
-procedure TLCLPdfControl.WMKeyUp(var Message: TLMKeyUp);
+procedure TPdfPageViewControl.WMKeyUp(var Message: TLMKeyUp);
 var
   curPage : TPdfPage;
   Shift: TShiftState;
@@ -493,7 +495,7 @@ begin
   inherited;
 end;
 
-procedure TLCLPdfControl.WMChar(var Message: TLMChar);
+procedure TPdfPageViewControl.WMChar(var Message: TLMChar);
 var
   curPage : TPdfPage;
   Shift: TShiftState;
@@ -508,7 +510,7 @@ begin
   inherited;
 end;
 
-procedure TLCLPdfControl.WMKillFocus(var Message: TLMKillFocus);
+procedure TPdfPageViewControl.WMKillFocus(var Message: TLMKillFocus);
 var
   curPage : TPdfPage;
 begin
@@ -521,13 +523,13 @@ begin
 end;
 
 (*
-procedure TLCLPdfControl.WMSetFocus(var Message: TLMSetFocus);
+procedure TPdfPageViewControl.WMSetFocus(var Message: TLMSetFocus);
 begin
   UpdateFocus(true);
 end;
 *)
 (*
-procedure TLCLPdfControl.UpdateFocus(AFocused: Boolean);
+procedure TPdfPageViewControl.UpdateFocus(AFocused: Boolean);
 var
   lForm: TCustomForm;
 begin
@@ -541,21 +543,21 @@ begin
 end;
 *)
 
-function TLCLPdfControl.PageX: integer;
+function TPdfPageViewControl.PageX: integer;
 begin
   Result := FViewportX;
   if FHorizontalScrollbar.Visible then
     Result := Result - FHorizontalScrollbar.Position;
 end;
 
-function TLCLPdfControl.PageY: integer;
+function TPdfPageViewControl.PageY: integer;
 begin
   Result := FViewportY;
   if FVerticalScrollbar.Visible then
     Result := Result - FVerticalScrollbar.Position;
 end;
 
-procedure TLCLPdfControl.Paint;
+procedure TPdfPageViewControl.Paint;
 var
   curPage : TPdfPage;
   x, y, i, tmp : Integer;
@@ -617,7 +619,7 @@ begin
   end;
 end;
 
-procedure TLCLPdfControl.MouseMove(Shift: TShiftState; X, Y: Integer);
+procedure TPdfPageViewControl.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
   curPage : TPdfPage;
   PagePt : TPdfPoint;
@@ -669,7 +671,7 @@ begin
 
 end;
 
-procedure TLCLPdfControl.MouseDown(Button: TMouseButton; Shift: TShiftState; X: Integer; Y: Integer);
+procedure TPdfPageViewControl.MouseDown(Button: TMouseButton; Shift: TShiftState; X: Integer; Y: Integer);
 var
   curPage : TPdfPage;
   PagePt : TPdfPoint;
@@ -721,7 +723,7 @@ begin
 
 end;
 
-procedure TLCLPdfControl.MouseUp(Button: TMouseButton; Shift: TShiftState; X: Integer; Y: Integer);
+procedure TPdfPageViewControl.MouseUp(Button: TMouseButton; Shift: TShiftState; X: Integer; Y: Integer);
 var
   curPage : TPdfPage;
   PagePt : TPdfPoint;
@@ -741,13 +743,13 @@ begin
   end;
 end;
 
-constructor TLCLPdfControl.Create(AOwner: TComponent);
+constructor TPdfPageViewControl.Create(AOwner: TComponent);
 begin
   inherited;
   FDocument := TPdfDocument.Create;
-  FDocument.OnFormInvalidate := @FormInvalidate;
-  FDocument.OnFormOutputSelectedRect := @FormOutputSelectedRect;
-  FDocument.OnFormGetCurrentPage := @FormGetCurrentPage;
+  FDocument.OnFormInvalidate := FormInvalidate;
+  FDocument.OnFormOutputSelectedRect := FormOutputSelectedRect;
+  FDocument.OnFormGetCurrentPage := FormGetCurrentPage;
   FOnWebLinkClick := nil;
   FDrawOptions := cPdfControlDefaultDrawOptions;
   FHighlightTextColor := cHighLightTextColor;
@@ -756,7 +758,7 @@ begin
   FScaleMode := smFitAuto;
   FZoomPercentage := 100;
   FAllowFormEvents := true;
-  FHighlightTextRects := TLCLPdfControlPdfRects.Create;
+  FHighlightTextRects := TPdfControlPdfRects.Create;
   Color:= clGray;
   Width := 130;
   Height := 180;
@@ -769,25 +771,25 @@ begin
   FHorizontalScrollbar.Kind:= sbHorizontal;
   FHorizontalScrollbar.Parent := Self;
   FHorizontalScrollbar.Align := alBottom;
-  FHorizontalScrollbar.OnChange := @OnChangeHorizontalScrollbar;
+  FHorizontalScrollbar.OnChange := OnChangeHorizontalScrollbar;
   FVerticalScrollbar := TScrollBar.Create(Self);
   FVerticalScrollbar.Kind:= sbVertical;
   FVerticalScrollbar.Parent := Self;
   FVerticalScrollbar.Align := alRight;
   FHorizontalScrollbar.Visible := false;
   FVerticalScrollbar.Visible := false;
-  FVerticalScrollbar.OnChange:= @OnChangeVerticalScrollbar;
+  FVerticalScrollbar.OnChange:= OnChangeVerticalScrollbar;
   FPageBackgroundColor:= clWhite;
 end;
 
-destructor TLCLPdfControl.Destroy;
+destructor TPdfPageViewControl.Destroy;
 begin
   FDocument.Free;
   FHighlightTextRects.Free;
   inherited Destroy;
 end;
 
-procedure TLCLPdfControl.LoadFromFile(const FileName: String; const Password: String; LoadOption: TPdfDocumentLoadOption);
+procedure TPdfPageViewControl.LoadFromFile(const FileName: String; const Password: String; LoadOption: TPdfDocumentLoadOption);
 begin
   try
     FDocument.LoadFromFile(UnicodeString(FileName), Password, LoadOption);
@@ -796,7 +798,7 @@ begin
   end;
 end;
 
-function TLCLPdfControl.GotoNextPage: Boolean;
+function TPdfPageViewControl.GotoNextPage: Boolean;
 begin
   Result := false;
   if PageIndexValid and (FPageIndex < FDocument.PageCount - 1) then
@@ -809,7 +811,7 @@ begin
   end;
 end;
 
-function TLCLPdfControl.GotoPrevPage: Boolean;
+function TPdfPageViewControl.GotoPrevPage: Boolean;
 begin
   Result := false;
   if PageIndexValid and (FPageIndex > 0) then
@@ -822,7 +824,7 @@ begin
   end;
 end;
 
-procedure TLCLPdfControl.HightlightText(const SearchText: string; MatchCase, MatchWholeWord: Boolean);
+procedure TPdfPageViewControl.HightlightText(const SearchText: string; MatchCase, MatchWholeWord: Boolean);
 var
   curPage: TPdfPage;
   CharIndex, CharCount, I, Count: Integer;
@@ -852,7 +854,7 @@ begin
   Invalidate;
 end;
 
-procedure TLCLPdfControl.SetBounds(aLeft, aTop, aWidth, aHeight: integer);
+procedure TPdfPageViewControl.SetBounds(aLeft, aTop, aWidth, aHeight: integer);
 begin
   inherited SetBounds(aLeft, aTop, aWidth, aHeight);
   AdjustGeometry;

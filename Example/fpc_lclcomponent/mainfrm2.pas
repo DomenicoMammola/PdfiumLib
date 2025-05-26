@@ -7,7 +7,8 @@ interface
 uses
   SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, PdfiumCore, ExtCtrls, StdCtrls,
-  Spin, ComCtrls, PrintersDlgs, PdfiumLclCtrl;
+  Spin, ComCtrls, PrintersDlgs, PdfiumPascalViewPageCtrl,
+  PdfiumPascalThumbnailsPanelCtrl;
 
 type
 
@@ -51,15 +52,14 @@ type
     procedure btnAddAnnotationClick(Sender: TObject);
     procedure OpenButtonClick(Sender: TObject);
   private
-    { Private-Deklarationen }
-    FCtrl: TLCLPdfControl;
+    FCtrl: TPdfPageViewControl;
+    FThumbsCtrl : TPdfThumbsControl;
     procedure WebLinkClick(Sender: TObject; Url: String);
     procedure AnnotationLinkClick(Sender: TObject; LinkInfo: TPdfLinkInfo; var Handled: Boolean);
     procedure PrintDocument(Sender: TObject);
     procedure ListAttachments;
     procedure OnWebLinkClick(Sender: TObject; Url: string);
   public
-    { Public-Deklarationen }
   end;
 
 var
@@ -88,7 +88,11 @@ begin
   //PDFiumDllDir := ExtractFilePath(ParamStr(0)) + 'x86';
   {$ENDIF CPUX64}
 
-  FCtrl := TLCLPdfControl.Create(Self);
+  FThumbsCtrl := TPdfThumbsControl.Create(Self);
+  FThumbsCtrl.Parent := Self;
+  FThumbsCtrl.Align:= alBottom;
+  FThumbsCtrl.Height:= 100;
+  FCtrl := TPdfPageViewControl.Create(Self);
   FCtrl.Parent := Self;
   FCtrl.Align := alClient;
   FCtrl.Color := clRed;
@@ -303,6 +307,7 @@ begin
   begin
     FCtrl.LoadFromFile(OpenDialog1.FileName);
     ListAttachments;
+    FThumbsCtrl.Document := FCtrl.Document;
   end;
 end;
 
