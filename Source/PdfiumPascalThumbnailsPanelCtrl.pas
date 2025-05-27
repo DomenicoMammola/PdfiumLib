@@ -16,8 +16,11 @@ type
 
   TPdfPageThumbnailPanel = class(TCustomPanel)
   strict private
+    const MARGIN_WIDTH : integer = 20;
+  strict private
     FPage : TPdfPage;
     FCachedBitmap : TBitmap;
+    FViewportX, FViewportY : integer;
     procedure SetPage(AValue: TPdfPage);
     procedure AdjustGeometry(out aPageWidth, aPageHeight, aViewportX, aViewportY : integer);
   protected
@@ -27,6 +30,21 @@ type
     destructor Destroy; override;
 
     property Page : TPdfPage read FPage write SetPage;
+  end;
+
+  { TPdfThumbnailsPanel }
+
+  TPdfThumbnailsPanel = class(TCustomControl)
+  protected
+    procedure Paint; override;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer); override;
+    procedure MouseMove(Shift: TShiftState; X, Y: integer); override;
+    procedure Click; override;
+    procedure DblClick; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
 
@@ -48,58 +66,74 @@ type
 implementation
 
 uses
-  SysUtils, Math,
+  SysUtils, Math, LCLIntf, LCLType,
   PdfiumPascalViewPageCtrl;
 
 { TPdfPageThumbnailPanel }
 
 procedure TPdfPageThumbnailPanel.SetPage(AValue: TPdfPage);
-var
-  pageWidth, pageHeight, viewportX, viewportY : Integer;
 begin
   if FPage=AValue then Exit;
   FPage:=AValue;
   FreeAndNil(FCachedBitmap);
-
-  FCachedBitmap:= TBitmap.Create;
-  FCachedBitmap.Width:= Self.Width;
-  FCachedBitmap.Height:= Self.Height;
-  if Assigned(GraphicsBackend_DrawPageToCanvas) then
-  begin
-    AdjustGeometry(pageWidth, pageHeight, viewportX, viewportY);
-    GraphicsBackend_DrawPageToCanvas(FPage, FCachedBitmap.Canvas, viewportX, viewportY, pageWidth, pageHeight, prNormal, [], Self.Color);
-  end;
 end;
 
 procedure TPdfPageThumbnailPanel.AdjustGeometry (out aPageWidth, aPageHeight, aViewportX, aViewportY : integer);
 var
   relPage, relViewport : double;
+  ch, cw : integer;
+  scroolbarSize : integer;
 begin
+//  LCLIntf.GetSystemMetrics(SM_CXVSCROLL);
+  scroolbarSize := LCLIntf.GetSystemMetrics(SM_CYHSCROLL);
+  ch := ClientRect.Height - (2 * MARGIN_WIDTH) - scroolbarSize;
+  cw := ClientRect.Width - (2 * MARGIN_WIDTH);
   relPage:= FPage.Height / FPage.Width;
-  relViewport:= ClientRect.Height / ClientRect.Width;
+  relViewport:= ch / cw;
 
   if (relViewport > relPage) then
   begin
-    aPageWidth := ClientRect.Width;
-    aPageHeight := min(ClientRect.Height, round(aPageWidth * FPage.Height / FPage.Width));
-    aViewportX := 0;
-    aViewportY := (ClientHeight - aPageHeight) div 2;
+    aPageWidth := cw;
+    aPageHeight := min(ch, round(aPageWidth * FPage.Height / FPage.Width));
+    aViewportX := MARGIN_WIDTH;
+    aViewportY := MARGIN_WIDTH + ((ch - aPageHeight) div 2);
   end
   else
   begin
-    aPageHeight := ClientRect.Height;
-    aPageWidth := min(Self.ClientRect.Width, round(aPageHeight * FPage.Width / FPage.Height));
-    aViewportX := (Self.ClientRect.Width - aPageWidth) div 2;
-    aViewportY := 0;
+    aPageHeight := ch;
+    aPageWidth := min(cw, round(aPageHeight * FPage.Width / FPage.Height));
+    aViewportX := MARGIN_WIDTH + ((cw - aPageWidth) div 2);
+    aViewportY := MARGIN_WIDTH;
   end;
 end;
 
 procedure TPdfPageThumbnailPanel.Paint;
+var
+  pageWidth, pageHeight : Integer;
 begin
   inherited Paint;
-  if Assigned(FPage) and Assigned(FCachedBitmap) then
+  Canvas.Brush.Style:= bsSolid;
+  Canvas.Brush.Color:= Self.Color;
+  Canvas.FillRect(ClientRect);
+
+  if Assigned(FPage) then
   begin
-    Self.Canvas.Draw(0, 0, FCachedBitmap);
+    if not Assigned(FCachedBitmap) then
+    begin
+      AdjustGeometry(pageWidth, pageHeight, FViewportX, FViewportY);
+
+      FCachedBitmap:= TBitmap.Create;
+      FCachedBitmap.Width:= pageWidth;
+      FCachedBitmap.Height:= pageHeight;
+      FCachedBitmap.Canvas.Brush.Style:= bsSolid;
+      FCachedBitmap.Canvas.Brush.Color:= clWhite;
+      FCachedBitmap.Canvas.FillRect(0, 0, FCachedBitmap.Width, FCachedBitmap.Height);
+
+      if Assigned(GraphicsBackend_DrawPageToCanvas) then
+        GraphicsBackend_DrawPageToCanvas(FPage, FCachedBitmap.Canvas, 0, 0, pageWidth, pageHeight, prNormal, [], clWhite);
+    end;
+
+    Self.Canvas.Draw(FViewportX, FViewportY, FCachedBitmap);
   end;
 end;
 
@@ -108,11 +142,63 @@ begin
   inherited Create(TheOwner);
   FPage := nil;
   FCachedBitmap := nil;
+  Color:= clDkGray;
 end;
 
 destructor TPdfPageThumbnailPanel.Destroy;
 begin
   FreeAndNil(FCachedBitmap);
+  inherited Destroy;
+end;
+
+{ TPdfThumbnailsPanel }
+
+procedure TPdfThumbnailsPanel.Paint;
+begin
+  Canvas.Lock;
+  try
+    Canvas.Pen.Mode := pmCopy;
+    Canvas.Brush.Color := Self.Color;
+    Canvas.Brush.Style := bsSolid;
+    Canvas.FillRect(ClientRect);
+
+  finally
+    Canvas.Unlock;
+  end;
+end;
+
+procedure TPdfThumbnailsPanel.MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+begin
+  inherited MouseUp(Button, Shift, X, Y);
+end;
+
+procedure TPdfThumbnailsPanel.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: integer);
+begin
+  inherited MouseDown(Button, Shift, X, Y);
+end;
+
+procedure TPdfThumbnailsPanel.MouseMove(Shift: TShiftState; X, Y: integer);
+begin
+  inherited MouseMove(Shift, X, Y);
+end;
+
+procedure TPdfThumbnailsPanel.Click;
+begin
+  inherited Click;
+end;
+
+procedure TPdfThumbnailsPanel.DblClick;
+begin
+  inherited DblClick;
+end;
+
+constructor TPdfThumbnailsPanel.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+end;
+
+destructor TPdfThumbnailsPanel.Destroy;
+begin
   inherited Destroy;
 end;
 
@@ -126,9 +212,7 @@ begin
   FScrollBox.Visible:= false;
   try
     for i := 0 to FPanels.Count - 1 do
-    begin
-      TPdfThumbsControl(FPanels.Items[i]).Free;
-    end;
+      TPdfPageThumbnailPanel(FPanels.Items[i]).Free;
     FPanels.Clear;
 
     FDocument:=AValue;
@@ -145,6 +229,7 @@ begin
   finally
     FScrollBox.Visible:= true;
   end;
+
 end;
 
 
